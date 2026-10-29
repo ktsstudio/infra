@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"github.com/infrahq/infra/internal/logging"
 	"os"
 	"path/filepath"
 
@@ -29,11 +30,16 @@ type localPublicKey struct {
 // readKeysConfig reads ~/.ssh/infra/keys.json and returns the contents.
 func readKeysConfig(infraSSHDir string) (*keysConfig, error) {
 	filename := filepath.Join(infraSSHDir, "keys.json")
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	fh, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer fh.Close() // read-only file
+	defer func() {
+		if err := fh.Close(); err != nil {
+			logging.Debugf("close read-only resource: %s", err)
+		}
+	}()
 
 	result := &keysConfig{}
 	err = json.NewDecoder(fh).Decode(result)
@@ -42,6 +48,7 @@ func readKeysConfig(infraSSHDir string) (*keysConfig, error) {
 
 func writeKeysConfig(infraSSHDir string, cfg *keysConfig) error {
 	filename := filepath.Join(infraSSHDir, "keys.json")
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	fh, err := os.Create(filename)
 	if err != nil {
 		return err

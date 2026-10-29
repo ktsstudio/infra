@@ -64,7 +64,9 @@ var (
 func (s StringRule) DescribeSchema(parent *openapi3.Schema) {
 	schema := schemaForProperty(parent, s.Name)
 
-	schema.MinLength = uint64(s.MinLength)
+	if s.MinLength > 0 {
+		schema.MinLength = uint64(s.MinLength)
+	}
 	if s.MaxLength > 0 {
 		max := uint64(s.MaxLength)
 		schema.MaxLength = &max

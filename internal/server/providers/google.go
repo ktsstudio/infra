@@ -107,7 +107,7 @@ func (g *google) checkGoogleWorkspaceGroups(ctx context.Context, providerUser *m
 		TokenURI    string `json:"token_uri"`
 	}
 
-	credsFile := credentialsFile{
+	credsFile := credentialsFile{ // #nosec G101 -- These are fixed public Google OAuth endpoints, not embedded credentials.
 		Type:        "service_account",
 		PrivateKey:  g.GoogleCredentials.PrivateKey,
 		ClientEmail: g.GoogleCredentials.ClientEmail,
@@ -115,12 +115,12 @@ func (g *google) checkGoogleWorkspaceGroups(ctx context.Context, providerUser *m
 		TokenURI:    "https://oauth2.googleapis.com/token",
 	}
 
-	credBytes, err := json.Marshal(credsFile)
+	credBytes, err := json.Marshal(credsFile) // #nosec G117 -- This local service-account DTO intentionally carries the configured private key to the Google library.
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to marshal google credentials: %w", err)
 	}
 
-	creds, err := googleOAuth.CredentialsFromJSONWithParams(ctx, credBytes, params)
+	creds, err := googleOAuth.CredentialsFromJSONWithTypeAndParams(ctx, credBytes, googleOAuth.ServiceAccount, params)
 	if err != nil {
 		return []string{}, fmt.Errorf("unable to create google credentials: %w", err)
 	}

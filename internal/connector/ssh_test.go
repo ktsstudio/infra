@@ -43,15 +43,16 @@ func TestUpdateLocalUsers(t *testing.T) {
 	err := updateLocalUsers(ctx, fakeClient, opts, grants)
 	assert.NilError(t, err)
 
+	// #nosec G304 -- Test-only file path constructed from a temporary directory or repository fixtures.
 	actual, err := os.ReadFile(logFile)
 	assert.NilError(t, err)
 
 	// this expected value can be updated by running tests with -update
 	expected := `pkill --signal KILL --uid three333
 pkill --signal KILL --uid four444
-userdel --remove three333
-userdel --remove four444
-useradd --comment 'Ej,managed by infra' -m -p '*' -g infra-users two222
+userdel --remove -- three333
+userdel --remove -- four444
+useradd --comment 'Ej,managed by infra' -m -p '*' -g infra-users -- two222
 `
 	assert.Equal(t, expected, string(actual))
 }
@@ -84,15 +85,16 @@ func TestUpdateLocalUsers_RemoveFailed(t *testing.T) {
 	err := updateLocalUsers(ctx, fakeClient, opts, grants)
 	assert.ErrorContains(t, err, "remove user failremove: userdel: exit status 8")
 
+	// #nosec G304 -- Test-only file path constructed from a temporary directory or repository fixtures.
 	actual, err := os.ReadFile(logFile)
 	assert.NilError(t, err)
 
 	// this expected value can be updated by running tests with -update
 	expected := `pkill --signal KILL --uid failremove
 pkill --signal KILL --uid three333
-userdel --remove failremove
-userdel --remove three333
-useradd --comment 'Ej,managed by infra' -m -p '*' -g infra-users two222
+userdel --remove -- failremove
+userdel --remove -- three333
+useradd --comment 'Ej,managed by infra' -m -p '*' -g infra-users -- two222
 `
 	assert.Equal(t, expected, string(actual))
 }

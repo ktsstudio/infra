@@ -168,6 +168,7 @@ func readSSHHostKeys(hostKeys []string, dir string) (string, error) {
 // and then writes the key to out. It is important to parse the key to prevent
 // accidentally sending a private key to the API.
 func readHostKeyFile(filename string, out io.Writer) error {
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	raw, err := os.ReadFile(filename)
 	if err != nil {
 		return err
@@ -269,6 +270,7 @@ func (c *sshdConfig) Merge(other sshdConfig) {
 // This parse is limited to the few fields we care about.
 // See https://man.openbsd.org/sshd_config for details about the file format.
 func readSSHDConfig(filename string, includeBasePath string) (sshdConfig, error) {
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	fh, err := os.Open(filename)
 	if err != nil {
 		return sshdConfig{}, err

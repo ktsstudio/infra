@@ -174,16 +174,21 @@ func astIdentForNode(expr ast.Expr) *ast.Ident {
 	}
 }
 
-func writeFile(fileset *token.FileSet, filename string, source *ast.File) error {
+func writeFile(fileset *token.FileSet, filename string, source *ast.File) (retErr error) {
 	var buf bytes.Buffer
 	if err := format.Node(&buf, fileset, source); err != nil {
 		return fmt.Errorf("failed to format file after update: %w", err)
 	}
 
-	fh, err := os.Create(filename)
+	fh, err := os.Create(filename) // #nosec G304 -- Developer code generation writes the explicitly selected source file.
 	if err != nil {
 		return fmt.Errorf("failed to open file %v: %w", filename, err)
 	}
+	defer func() {
+		if err := fh.Close(); retErr == nil {
+			retErr = err
+		}
+	}()
 	if _, err = fh.Write(buf.Bytes()); err != nil {
 		return fmt.Errorf("failed to write file %v: %w", filename, err)
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/infrahq/infra/internal/logging"
 	"io"
 	"net/http"
 	"strings"
@@ -102,7 +103,11 @@ func (j *authenticator) getJWK() (*jose.JSONWebKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			logging.Debugf("close read-only resource: %s", err)
+		}
+	}()
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return nil, fmt.Errorf("unexpected response: %v ", res.Status)

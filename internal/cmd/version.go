@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"text/tabwriter"
@@ -24,21 +25,29 @@ func newVersionCmd(cli *CLI) *cobra.Command {
 	}
 }
 
-func version(cli *CLI) error {
+func version(cli *CLI) (retErr error) {
 	ctx := context.Background()
 
 	w := tabwriter.NewWriter(cli.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight)
-	defer w.Flush()
+	defer func() { retErr = errors.Join(retErr, w.Flush()) }()
 
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Client:\t", strings.TrimPrefix(internal.FullVersion(), "v"))
+	if _, err := fmt.Fprintln(w); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
+	if _, err := fmt.Fprintln(w, "Client:\t", strings.TrimPrefix(internal.FullVersion(), "v")); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
 	// Note that we use the client to get this version, but it is in fact the server version
 	client, err := cli.apiClient()
 	if err != nil {
-		fmt.Fprintln(w, "Server:\t", "disconnected")
+		if _, err := fmt.Fprintln(w, "Server:\t", "disconnected"); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 		logging.Debugf("%s", err.Error())
-		fmt.Fprintln(w)
+		if _, err := fmt.Fprintln(w); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 
 		return nil
 	}
@@ -50,21 +59,31 @@ func version(cli *CLI) error {
 
 	// Don't bother printing the server version for SaaS
 	if strings.HasSuffix(config.Host, ".infrahq.com") {
-		fmt.Fprintln(w)
+		if _, err := fmt.Fprintln(w); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 		return nil
 	}
 
 	version, err := client.GetServerVersion(ctx)
 	if err != nil {
-		fmt.Fprintln(w, "Server:\t", "disconnected")
+		if _, err := fmt.Fprintln(w, "Server:\t", "disconnected"); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 		logging.Debugf("%s", err.Error())
-		fmt.Fprintln(w)
+		if _, err := fmt.Fprintln(w); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 
 		return nil
 	}
 
-	fmt.Fprintln(w, "Server:\t", strings.TrimPrefix(version.Version, "v"))
-	fmt.Fprintln(w)
+	if _, err := fmt.Fprintln(w, "Server:\t", strings.TrimPrefix(version.Version, "v")); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
+	if _, err := fmt.Fprintln(w); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
 	return nil
 }

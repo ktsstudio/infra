@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -52,15 +53,15 @@ func PostgresDriver(t TestingT, schemaSuffix string) *Driver {
 	db, err := sql.Open("pgx", pgConn)
 	assert.NilError(t, err, "connect to postgresql")
 	t.Cleanup(func() {
-		_, err := db.Exec("DROP SCHEMA IF EXISTS " + name + " CASCADE")
+		_, err := db.ExecContext(context.Background(), "DROP SCHEMA IF EXISTS "+name+" CASCADE")
 		assert.NilError(t, err)
 		assert.NilError(t, db.Close())
 	})
 
 	// Drop any leftover schema before creating a new one.
-	_, err = db.Exec("DROP SCHEMA IF EXISTS " + name + " CASCADE")
+	_, err = db.ExecContext(context.Background(), "DROP SCHEMA IF EXISTS "+name+" CASCADE")
 	assert.NilError(t, err)
-	_, err = db.Exec("CREATE SCHEMA " + name)
+	_, err = db.ExecContext(context.Background(), "CREATE SCHEMA "+name)
 	assert.NilError(t, err)
 
 	dsn := pgConn + " search_path=" + name

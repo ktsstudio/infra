@@ -28,7 +28,7 @@ func TestServerLimitsAccessWithTemporaryPassword(t *testing.T) {
 	// user can't access other urls.
 	tryOtherURL := func() *httptest.ResponseRecorder {
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodGet, "/api/users/"+loginResp.UserID.String(), nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/users/"+loginResp.UserID.String(), nil)
 		req.Header.Add("Authorization", "Bearer "+key)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -54,11 +54,11 @@ func changePassword(t *testing.T, routes Routes, accessKey string, id uid.ID, ol
 		OldPassword: oldPassword,
 		Password:    password,
 	}
-	body, err := json.Marshal(r)
+	body, err := json.Marshal(r) // #nosec G117 -- This test intentionally serializes the password update API request.
 	assert.NilError(t, err)
 
 	// nolint:noctx
-	req := httptest.NewRequest(http.MethodPut, "/api/users/"+id.String(), bytes.NewReader(body))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/users/"+id.String(), bytes.NewReader(body))
 	req.Header.Add("Authorization", "Bearer "+accessKey)
 	req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -78,7 +78,7 @@ func changePassword(t *testing.T, routes Routes, accessKey string, id uid.ID, ol
 func login(t *testing.T, routes Routes, name, pass string) *api.LoginResponse {
 	loginReq := api.LoginRequest{PasswordCredentials: &api.LoginRequestPasswordCredentials{Name: name, Password: pass}}
 	body := jsonBody(t, loginReq)
-	req := httptest.NewRequest(http.MethodPost, "/api/login", body)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/login", body)
 	req.Header.Add("Infra-Version", apiVersionLatest)
 
 	resp := httptest.NewRecorder()

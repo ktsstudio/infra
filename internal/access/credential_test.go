@@ -1,9 +1,11 @@
 package access
 
 import (
+	"bufio"
 	"io/fs"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
@@ -123,9 +125,6 @@ func TestCheckBadPasswords(t *testing.T) {
 
 	badPasswordsFile := path.Join(t.TempDir(), "bad-passwords")
 	t.Setenv("INFRA_SERVER_BAD_PASSWORDS_FILE", badPasswordsFile)
-	t.Cleanup(func() {
-		os.Remove(badPasswordsFile)
-	})
 
 	t.Run("bad passwords file not found", func(t *testing.T) {
 		err := checkBadPasswords("badpassword")
@@ -145,5 +144,11 @@ func TestCheckBadPasswords(t *testing.T) {
 	t.Run("password not in bad passwords file", func(t *testing.T) {
 		err := checkBadPasswords("notbadpassword")
 		assert.NilError(t, err)
+	})
+
+	t.Run("unreadable password list fails closed", func(t *testing.T) {
+		err := os.WriteFile(badPasswordsFile, []byte(strings.Repeat("x", bufio.MaxScanTokenSize+1)), 0o600)
+		assert.NilError(t, err)
+		assert.ErrorContains(t, checkBadPasswords("notbadpassword"), "token too long")
 	})
 }

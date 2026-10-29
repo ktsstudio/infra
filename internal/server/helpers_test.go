@@ -128,14 +128,14 @@ func createAccessKey(t *testing.T, db data.WriteTxn, email string) (string, *mod
 
 func createIdentities(t *testing.T, db data.WriteTxn, identities ...*models.Identity) {
 	t.Helper()
-	for i := range identities {
-		err := data.CreateIdentity(db, identities[i])
-		assert.NilError(t, err, identities[i].Name)
-		for _, g := range identities[i].Groups {
-			err := data.AddUsersToGroup(db, g.ID, []uid.ID{identities[i].ID})
+	for _, identity := range identities {
+		err := data.CreateIdentity(db, identity)
+		assert.NilError(t, err, identity.Name)
+		for _, g := range identity.Groups {
+			err := data.AddUsersToGroup(db, g.ID, []uid.ID{identity.ID})
 			assert.NilError(t, err)
 		}
-		assert.NilError(t, err, identities[i].Name)
+		assert.NilError(t, err, identity.Name)
 	}
 }
 
@@ -155,7 +155,7 @@ func createUser(t *testing.T, srv *Server, routes Routes, email string) *api.Cre
 	assert.NilError(t, err)
 
 	// nolint:noctx
-	req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewReader(body))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", bytes.NewReader(body))
 	req.Header.Add("Authorization", "Bearer "+adminAccessKey(srv))
 	req.Header.Add("Infra-Version", apiVersionLatest)
 

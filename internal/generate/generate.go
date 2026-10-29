@@ -39,6 +39,7 @@ func CryptoRandom(n int, charset string) (string, error) {
 var random *mathrand.Rand
 
 func init() {
+	// #nosec G404 -- non-secret IDs and username suffixes; secret tokens use CryptoRandom.
 	random = mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
 }
 
@@ -64,5 +65,6 @@ func MathRandom(n int, charset string) string {
 // only be used by tests.
 // SetSeed can not be called concurrently with itself or MathRandom.
 func SetSeed(seed int64) {
+	// #nosec G404 -- non-secret IDs and username suffixes; secret tokens use CryptoRandom.
 	random = mathrand.New(mathrand.NewSource(seed))
 }

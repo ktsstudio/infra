@@ -100,7 +100,7 @@ func TestAPI_GetProviderUser(t *testing.T) {
 	for _, tc := range testCases {
 		bearer, routes, user := tc.setup(t)
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/scim/v2/Users/%s", user.ID), nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("/api/scim/v2/Users/%s", user.ID), nil)
 		req.Header.Add("Authorization", "Bearer "+bearer)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -234,7 +234,7 @@ func TestAPI_ListProviderUsers(t *testing.T) {
 	for _, tc := range testCases {
 		bearer, params, routes, exp := tc.setup(t)
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/scim/v2/Users%s", params), nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("/api/scim/v2/Users%s", params), nil)
 		req.Header.Add("Authorization", "Bearer "+bearer)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -465,7 +465,7 @@ func TestAPI_CreateProviderUser(t *testing.T) {
 	for _, tc := range testCases {
 		bearer, routes, reqBody := tc.setup(t)
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/scim/v2/Users", jsonBody(t, reqBody))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/scim/v2/Users", jsonBody(t, reqBody))
 		req.Header.Add("Authorization", "Bearer "+bearer)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -668,7 +668,7 @@ func TestAPI_UpdateProviderUser(t *testing.T) {
 	for _, tc := range testCases {
 		bearer, routes, id, reqBody := tc.setup(t)
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPut, "/api/scim/v2/Users/"+id.String(), jsonBody(t, reqBody))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/scim/v2/Users/"+id.String(), jsonBody(t, reqBody))
 		req.Header.Add("Authorization", "Bearer "+bearer)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -774,7 +774,7 @@ func TestAPI_PatchProviderUser(t *testing.T) {
 	for _, tc := range testCases {
 		bearer, routes, id, reqBody := tc.setup(t)
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPatch, "/api/scim/v2/Users/"+id.String(), jsonBody(t, reqBody))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPatch, "/api/scim/v2/Users/"+id.String(), jsonBody(t, reqBody))
 		req.Header.Add("Authorization", "Bearer "+bearer)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -833,7 +833,7 @@ func TestAPI_DeleteProviderUser(t *testing.T) {
 	for _, tc := range testCases {
 		bearer, routes, id := tc.setup(t)
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodDelete, "/api/scim/v2/Users/"+id.String(), nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/scim/v2/Users/"+id.String(), nil)
 		req.Header.Add("Authorization", "Bearer "+bearer)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 

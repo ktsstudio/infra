@@ -150,7 +150,7 @@ func TestTrimWhitespace(t *testing.T) {
 
 	userID := uid.New()
 	// nolint:noctx
-	req := httptest.NewRequest(http.MethodPost, "/api/grants", jsonBody(t, api.GrantRequest{
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/grants", jsonBody(t, api.GrantRequest{
 		User:      userID,
 		Privilege: "admin   ",
 		Resource:  " kubernetes.production.*",
@@ -163,7 +163,7 @@ func TestTrimWhitespace(t *testing.T) {
 	assert.Equal(t, resp.Code, http.StatusCreated, resp.Body.String())
 
 	// nolint:noctx
-	req = httptest.NewRequest(http.MethodGet, "/api/grants?privilege=%20admin%20&userID="+userID.String(), nil)
+	req = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/grants?privilege=%20admin%20&userID="+userID.String(), nil)
 	req.Header.Add("Authorization", "Bearer "+adminAccessKey(srv))
 	req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -212,7 +212,7 @@ func TestWrapRoute_TxnRollbackOnError(t *testing.T) {
 	add(api, newRouterGroup(router.Group("/")), "POST", "/do", r)
 
 	resp := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/do", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "POST", "/do", nil)
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, resp.Code, http.StatusInternalServerError)
@@ -243,7 +243,7 @@ func TestWrapRoute_HandleErrorOnCommit(t *testing.T) {
 	add(api, newRouterGroup(router.Group("/")), "POST", "/do", r)
 
 	resp := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/do", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "POST", "/do", nil)
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, resp.Code, http.StatusInternalServerError)
@@ -259,7 +259,7 @@ func TestInfraVersionHeader(t *testing.T) {
 
 	body := jsonBody(t, api.CreateUserRequest{Name: "usera@example.com"})
 	// nolint:noctx
-	req := httptest.NewRequest(http.MethodPost, "/api/users", body)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", body)
 	req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 
 	resp := httptest.NewRecorder()
@@ -300,7 +300,7 @@ func TestRequestTimeout(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/sleep", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/sleep", nil)
 	req.Header.Add("Infra-Version", apiVersionLatest)
 
 	resp := httptest.NewRecorder()
@@ -325,7 +325,7 @@ func TestGenerateRoutes_OneRequestDoesNotBlockOthers(t *testing.T) {
 	// start a blocking request in the background
 	g.Go(func() error {
 		urlPath := "/api/grants?destination=infra&lastUpdateIndex=10001"
-		req := httptest.NewRequest(http.MethodGet, urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, urlPath, nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -339,7 +339,7 @@ func TestGenerateRoutes_OneRequestDoesNotBlockOthers(t *testing.T) {
 	var count int
 	for time.Since(start) < srv.options.API.BlockingRequestTimeout && count < 3 {
 		urlPath := "/api/grants?destination=infra"
-		req := httptest.NewRequest(http.MethodGet, urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, urlPath, nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Add("Infra-Version", apiVersionLatest)
 

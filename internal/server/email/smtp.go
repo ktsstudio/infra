@@ -1,6 +1,7 @@
 package email
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
@@ -38,27 +39,30 @@ func (c *Client) connect() (err error) {
 		return fmt.Errorf("Sendgrid API key is not set")
 	}
 
-	conn, err := tls.Dial("tcp", SMTPServer, &tls.Config{
+	dialer := &tls.Dialer{Config: &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		MaxVersion: tls.VersionTLS13,
 		// nolint:gosec
 		InsecureSkipVerify: c.skipTLSVerify, // only used by tests
-	})
+	}}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	rawConn, err := dialer.DialContext(ctx, "tcp", SMTPServer)
 	if err != nil {
 		return err
 	}
+	conn := rawConn.(*tls.Conn) // tls.Dialer always returns a TLS connection.
 
-	err = conn.SetDeadline(time.Now().Add(30 * time.Second))
-	if err != nil {
-		return fmt.Errorf("set deadline: %w", err)
-	}
 	c.Conn = conn
-
 	defer func() {
 		if err != nil {
+			_ = conn.Close() // Preserve the connection/authentication error.
 			c.Conn = nil
 		}
 	}()
+	if err = conn.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
+		return fmt.Errorf("set deadline: %w", err)
+	}
 
 	auth := smtp.PlainAuth("", "apikey", SendgridAPIKey, SMTPServer)
 

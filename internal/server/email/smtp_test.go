@@ -52,7 +52,7 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 		c, err := listener.Accept()
 		assert.NilError(t, err)
 		handler(t, c)
-		c.Close()
+		assert.NilError(t, c.Close())
 	}()
 	return listener
 }
@@ -125,8 +125,6 @@ func (e *captureSentEmail) successCase(t *testing.T, c net.Conn) {
 					isPlain = true
 				case "Content-Type: text/html":
 					isPlain = false
-				case "--c3VwYWhpbmZyYQ--":
-					break
 				case "":
 				default:
 					b, err := base64.StdEncoding.DecodeString(s)

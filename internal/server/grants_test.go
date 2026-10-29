@@ -34,7 +34,7 @@ func TestAPI_ListGrants(t *testing.T) {
 		err := json.NewEncoder(&buf).Encode(body)
 		assert.NilError(t, err)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/users", &buf)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", &buf)
 		req.Header.Add("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -59,7 +59,7 @@ func TestAPI_ListGrants(t *testing.T) {
 		assert.NilError(t, err)
 
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/grants", &buf)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/grants", &buf)
 		req.Header.Add("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -112,7 +112,7 @@ func TestAPI_ListGrants(t *testing.T) {
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		req := httptest.NewRequest(http.MethodGet, tc.urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.urlPath, nil)
 		req.Header.Set("Authorization", "Bearer "+accessKey)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -557,7 +557,7 @@ func TestAPI_ListGrants_InheritedGrants(t *testing.T) {
 		err := json.NewEncoder(&buf).Encode(body)
 		assert.NilError(t, err)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/users", &buf)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", &buf)
 		req.Header.Add("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -624,7 +624,7 @@ func TestAPI_ListGrants_InheritedGrants(t *testing.T) {
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		req := httptest.NewRequest(http.MethodGet, tc.urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.urlPath, nil)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
 		if tc.setup != nil {
@@ -746,7 +746,7 @@ func TestAPI_ListGrants_ExtendedRequestTimeout(t *testing.T) {
 	routes := srv.GenerateRoutes()
 
 	urlPath := "/api/grants?destination=infra&lastUpdateIndex=10001"
-	req := httptest.NewRequest(http.MethodGet, urlPath, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, urlPath, nil)
 	req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 	req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -774,7 +774,7 @@ func TestAPI_ListGrants_ExtendedRequestTimeout_CancelledByClient(t *testing.T) {
 	routes := srv.GenerateRoutes()
 
 	urlPath := "/api/grants?destination=infra&lastUpdateIndex=10001"
-	req := httptest.NewRequest(http.MethodGet, urlPath, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, urlPath, nil)
 	req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 	req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -818,7 +818,7 @@ func TestAPI_ListGrants_BlockingRequest_BlocksUntilUpdate(t *testing.T) {
 	respCh := make(chan *httptest.ResponseRecorder)
 	g.Go(func() error {
 		urlPath := "/api/grants?destination=infra&lastUpdateIndex=10001"
-		req := httptest.NewRequest(http.MethodGet, urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, urlPath, nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -890,7 +890,7 @@ func TestAPI_ListGrants_BlockingRequest_NotFoundBlocksUntilUpdate(t *testing.T) 
 	respCh := make(chan *httptest.ResponseRecorder)
 	g.Go(func() error {
 		urlPath := "/api/grants?destination=deferred&lastUpdateIndex=1"
-		req := httptest.NewRequest(http.MethodGet, urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, urlPath, nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -987,7 +987,7 @@ func TestAPI_CreateGrant(t *testing.T) {
 
 	run := func(t *testing.T, tc testCase) {
 		body := jsonBody(t, tc.body)
-		req := httptest.NewRequest(http.MethodPost, "/api/grants", body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/grants", body)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
 		if tc.setup != nil {
@@ -1279,7 +1279,7 @@ func TestAPI_DeleteGrant(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Assert(t, len(infraAdminGrants) == 1)
 
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/grants/%s", infraAdminGrants[0].ID), nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, fmt.Sprintf("/api/grants/%s", infraAdminGrants[0].ID), nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -1297,7 +1297,7 @@ func TestAPI_DeleteGrant(t *testing.T) {
 		err := data.CreateGrant(srv.DB(), grant)
 		assert.NilError(t, err)
 
-		req := httptest.NewRequest(http.MethodDelete, "/api/grants/"+grant.ID.String(), nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/grants/"+grant.ID.String(), nil)
 		req.Header.Set("Authorization", "Bearer "+otherOrg.AdminAccessKey)
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -1317,7 +1317,7 @@ func TestAPI_DeleteGrant(t *testing.T) {
 		err := data.CreateGrant(srv.DB(), grant2)
 		assert.NilError(t, err)
 
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/grants/%s", grant2.ID), nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, fmt.Sprintf("/api/grants/%s", grant2.ID), nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -1337,7 +1337,7 @@ func TestAPI_DeleteGrant(t *testing.T) {
 		err := data.CreateGrant(srv.DB(), grant2)
 		assert.NilError(t, err)
 
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/grants/%s", grant2.ID), nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, fmt.Sprintf("/api/grants/%s", grant2.ID), nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -1357,7 +1357,7 @@ func TestAPI_DeleteGrant(t *testing.T) {
 		err := data.CreateGrant(srv.DB(), grant2)
 		assert.NilError(t, err)
 
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/grants/%s", grant2.ID), nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, fmt.Sprintf("/api/grants/%s", grant2.ID), nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -1394,7 +1394,7 @@ func TestAPI_UpdateGrants(t *testing.T) {
 
 	run := func(t *testing.T, tc testCase) {
 		body := jsonBody(t, tc.body)
-		req := httptest.NewRequest(http.MethodPatch, "/api/grants", body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPatch, "/api/grants", body)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
 		if tc.setup != nil {

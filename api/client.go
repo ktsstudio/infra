@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -57,6 +58,9 @@ func checkError(resp *http.Response, body []byte) error {
 		return nil
 	}
 
+	if resp.StatusCode < math.MinInt32 || resp.StatusCode > math.MaxInt32 {
+		return fmt.Errorf("invalid HTTP status code: %d", resp.StatusCode)
+	}
 	apiError := Error{Code: int32(resp.StatusCode)}
 
 	err := json.Unmarshal(body, &apiError)
@@ -130,12 +134,16 @@ func request[Res any](client Client, req *http.Request) (*Res, error) {
 		}
 		return nil, fmt.Errorf("%s %q: %w", req.Method, req.URL.Path, err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logging.Debugf("close read-only resource: %s", err)
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			return nil, fmt.Errorf("%w: %s", ErrTimeout, err)
+			return nil, fmt.Errorf("%w: %w", ErrTimeout, err)
 		}
 		return nil, fmt.Errorf("reading response: %w", err)
 	}
@@ -455,7 +463,7 @@ func HandleConnError(err error) error {
 	urlErr := &url.Error{}
 	if errors.As(err, &urlErr) {
 		if urlErr.Timeout() {
-			return fmt.Errorf("%w: %s", ErrTimeout, err)
+			return fmt.Errorf("%w: %w", ErrTimeout, err)
 		}
 	}
 

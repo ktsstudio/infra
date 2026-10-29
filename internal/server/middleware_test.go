@@ -72,7 +72,7 @@ func TestRequireAccessKey(t *testing.T) {
 		"AccessKeyValid": {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
 				authentication := issueToken(t, db, "existing@infrahq.com", time.Minute*1)
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				r.Header.Add("Authorization", "Bearer "+authentication)
 				return r
 			},
@@ -93,7 +93,7 @@ func TestRequireAccessKey(t *testing.T) {
 				}
 				authentication, err := data.CreateAccessKey(db, token)
 				assert.NilError(t, err)
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				r.Header.Add("Authorization", "Bearer "+authentication)
 				return r
 			},
@@ -106,7 +106,7 @@ func TestRequireAccessKey(t *testing.T) {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
 				authentication := issueToken(t, db, "existing@infrahq.com", time.Minute*1)
 
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 
 				r.AddCookie(&http.Cookie{
 					Name:     cookieAuthorizationName,
@@ -130,7 +130,7 @@ func TestRequireAccessKey(t *testing.T) {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
 				authentication := issueToken(t, db, "existing@infrahq.com", time.Minute*1)
 
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 
 				r.AddCookie(&http.Cookie{
 					Name:     cookieSignupName,
@@ -154,7 +154,7 @@ func TestRequireAccessKey(t *testing.T) {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
 				authentication := issueToken(t, db, "existing@infrahq.com", time.Minute*1)
 
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 
 				r.AddCookie(&http.Cookie{
 					Name:     cookieSignupName,
@@ -187,7 +187,7 @@ func TestRequireAccessKey(t *testing.T) {
 		"AccessKeyExpired": {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
 				authentication := issueToken(t, db, "existing@infrahq.com", time.Minute*-1)
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				r.Header.Add("Authorization", "Bearer "+authentication)
 				return r
 			},
@@ -198,7 +198,7 @@ func TestRequireAccessKey(t *testing.T) {
 		"AccessKeyInactivityTimeout": {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
 				authentication := issueTokenWithTimeout(t, db, "existing@infrahq.com", time.Minute*1, time.Minute*-1)
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				r.Header.Add("Authorization", "Bearer "+authentication)
 				return r
 			},
@@ -211,7 +211,7 @@ func TestRequireAccessKey(t *testing.T) {
 				token := issueToken(t, db, "existing@infrahq.com", time.Minute*1)
 				secret := token[:models.AccessKeySecretLength]
 				authentication := fmt.Sprintf("%s.%s", uid.New().String(), secret)
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				r.Header.Add("Authorization", "Bearer "+authentication)
 				return r
 			},
@@ -222,7 +222,7 @@ func TestRequireAccessKey(t *testing.T) {
 		"AccessKeyNoMatch": {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
 				authentication := fmt.Sprintf("%s.%s", uid.New().String(), generate.MathRandom(models.AccessKeySecretLength, generate.CharsetAlphaNumeric))
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				r.Header.Add("Authorization", "Bearer "+authentication)
 				return r
 			},
@@ -234,7 +234,7 @@ func TestRequireAccessKey(t *testing.T) {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
 				token := issueToken(t, db, "existing@infrahq.com", time.Minute*1)
 				authentication := fmt.Sprintf("%s.%s", strings.Split(token, ".")[0], generate.MathRandom(models.AccessKeySecretLength, generate.CharsetAlphaNumeric))
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				r.Header.Add("Authorization", "Bearer "+authentication)
 				return r
 			},
@@ -246,7 +246,7 @@ func TestRequireAccessKey(t *testing.T) {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
 				authentication, err := generate.CryptoRandom(32, generate.CharsetAlphaNumeric)
 				assert.NilError(t, err)
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				r.Header.Add("Authorization", "Bearer "+authentication)
 				return r
 			},
@@ -257,7 +257,7 @@ func TestRequireAccessKey(t *testing.T) {
 		"NoAuthentication": {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
 				// nil pointer if we don't seup the request header here
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				return r
 			},
 			expected: func(t *testing.T, _ access.Authenticated, err error) {
@@ -266,7 +266,7 @@ func TestRequireAccessKey(t *testing.T) {
 		},
 		"EmptyAuthentication": {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				r.Header.Add("Authorization", "")
 				return r
 			},
@@ -276,7 +276,7 @@ func TestRequireAccessKey(t *testing.T) {
 		},
 		"EmptySpaceAuthentication": {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 				r.Header.Add("Authorization", " ")
 				return r
 			},
@@ -286,7 +286,7 @@ func TestRequireAccessKey(t *testing.T) {
 		},
 		"EmptyCookieAuthentication": {
 			setup: func(t *testing.T, db data.WriteTxn) *http.Request {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 
 				r.AddCookie(&http.Cookie{
 					Name:     cookieAuthorizationName,
@@ -361,7 +361,7 @@ func TestHandleInfraDestinationHeader(t *testing.T) {
 		assert.NilError(t, err)
 
 		doRequest := func() {
-			r := httptest.NewRequest("GET", "/api/grants", nil)
+			r := httptest.NewRequestWithContext(t.Context(), "GET", "/api/grants", nil)
 			r.Header.Set("Infra-Version", apiVersionLatest)
 			r.Header.Set(headerInfraDestinationUniqueID, destination.UniqueID)
 			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", secret))
@@ -392,7 +392,7 @@ func TestHandleInfraDestinationHeader(t *testing.T) {
 		assert.NilError(t, err)
 
 		doRequest := func() {
-			r := httptest.NewRequest("GET", "/api/grants", nil)
+			r := httptest.NewRequestWithContext(t.Context(), "GET", "/api/grants", nil)
 			r.Header.Set("Infra-Version", apiVersionLatest)
 			r.Header.Set(headerInfraDestinationName, destination.Name)
 			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", secret))
@@ -415,7 +415,7 @@ func TestHandleInfraDestinationHeader(t *testing.T) {
 		err := data.CreateDestination(db, destination)
 		assert.NilError(t, err)
 
-		r := httptest.NewRequest("GET", "/good", nil)
+		r := httptest.NewRequestWithContext(t.Context(), "GET", "/good", nil)
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", secret))
 		w := httptest.NewRecorder()
 		routes.ServeHTTP(w, r)
@@ -426,7 +426,7 @@ func TestHandleInfraDestinationHeader(t *testing.T) {
 	})
 
 	t.Run("good no destination", func(t *testing.T) {
-		r := httptest.NewRequest("GET", "/good", nil)
+		r := httptest.NewRequestWithContext(t.Context(), "GET", "/good", nil)
 		r.Header.Add("Infra-Destination", "nonexistent")
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", secret))
 		w := httptest.NewRecorder()

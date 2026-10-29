@@ -163,12 +163,13 @@ func addAuthURLAndScopeToProviders() *migrator.Migration {
 					return err
 				}
 
-				for rows.Next() {
-					var provider models.Provider
-					if err := rows.Scan(&provider.ID, &provider.URL, &provider.Kind); err != nil {
-						return err
-					}
-
+				providerRows, err := scanRows(rows, func(provider *models.Provider) []any {
+					return []any{&provider.ID, &provider.URL, &provider.Kind}
+				})
+				if err != nil {
+					return err
+				}
+				for _, provider := range providerRows {
 					// do not resolve the auth details for the infra provider
 					// check infra provider name and kind just in case other migrations haven't run
 					if provider.Kind == models.ProviderKindInfra || provider.Name == models.InternalInfraProviderName {
@@ -181,7 +182,7 @@ func addAuthURLAndScopeToProviders() *migrator.Migration {
 					authServerInfo, err := providerClient.AuthServerInfo(context.Background())
 					if err != nil {
 						if errors.Is(err, context.DeadlineExceeded) {
-							return fmt.Errorf("%w: %s", internal.ErrBadGateway, err)
+							return fmt.Errorf("%w: %s", internal.ErrBadGateway, err.Error())
 						}
 						return fmt.Errorf("could not get provider info: %w", err)
 					}
@@ -193,7 +194,7 @@ func addAuthURLAndScopeToProviders() *migrator.Migration {
 						return err
 					}
 				}
-				return rows.Close()
+				return nil
 			}
 
 			return nil

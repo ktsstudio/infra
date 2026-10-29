@@ -90,6 +90,7 @@ func TestProvidersAddCmd(t *testing.T) {
 
 		createProviderRequest := <-ch
 
+		// #nosec G101 -- Synthetic credentials used only by this test fixture.
 		expected := api.CreateProviderRequest{
 			Name:         "okta",
 			URL:          "https://okta.com/path",
@@ -116,6 +117,7 @@ func TestProvidersAddCmd(t *testing.T) {
 
 		createProviderRequest := <-provCh
 
+		// #nosec G101 -- Synthetic credentials used only by this test fixture.
 		expectedProvider := api.CreateProviderRequest{
 			Name:         "okta",
 			URL:          "https://okta.com/path",
@@ -149,6 +151,7 @@ func TestProvidersAddCmd(t *testing.T) {
 
 		createProviderRequest := <-ch
 
+		// #nosec G101 -- Synthetic credentials used only by this test fixture.
 		expected := api.CreateProviderRequest{
 			Name:         "okta",
 			URL:          "https://okta.com/path",
@@ -174,6 +177,7 @@ func TestProvidersAddCmd(t *testing.T) {
 
 		createProviderRequest := <-ch
 
+		// #nosec G101 -- Synthetic credentials used only by this test fixture.
 		expected := api.CreateProviderRequest{
 			Name:         "google",
 			URL:          "accounts.google.com",
@@ -202,6 +206,7 @@ func TestProvidersAddCmd(t *testing.T) {
 
 		createProviderRequest := <-ch
 
+		// #nosec G101 -- Synthetic credentials used only by this test fixture.
 		expected := api.CreateProviderRequest{
 			Name:         "google",
 			URL:          "accounts.google.com",
@@ -385,6 +390,7 @@ func TestProvidersEditCmd(t *testing.T) {
 
 		updateProviderRequest := <-ch
 
+		// #nosec G101 -- Synthetic credentials used only by this test fixture.
 		expected := api.UpdateProviderRequest{
 			Name:         "okta",
 			URL:          "https://okta.com/path",

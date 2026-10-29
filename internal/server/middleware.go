@@ -192,7 +192,7 @@ func requireAccessKey(c *gin.Context, db data.WriteTxn, srv *Server) (access.Aut
 		if errors.Is(err, data.ErrAccessKeyExpired) {
 			return u, AuthenticationError{Message: "access key has expired"}
 		}
-		return u, fmt.Errorf("%w: invalid token: %s", internal.ErrUnauthorized, err)
+		return u, fmt.Errorf("%w: invalid token: %s", internal.ErrUnauthorized, err.Error())
 	}
 
 	if accessKey.Scopes.Includes(models.ScopePasswordReset) {

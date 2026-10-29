@@ -61,7 +61,7 @@ func TestWellKnownJWKs(t *testing.T) {
 
 	run := func(t *testing.T, tc testCase) {
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodGet, "/.well-known/jwks.json", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/.well-known/jwks.json", nil)
 
 		if tc.setup != nil {
 			tc.setup(t, req)

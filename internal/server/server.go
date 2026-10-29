@@ -297,12 +297,13 @@ func registerUIRoutes(router *gin.Engine, opts UIOptions) {
 		return
 	}
 	remote := opts.ProxyURL.Value()
-	proxy := httputil.NewSingleHostReverseProxy(remote)
-	proxy.Director = func(req *http.Request) {
-		req.Host = remote.Host
-		req.URL.Scheme = remote.Scheme
-		req.URL.Host = remote.Host
-	}
+	proxy := &httputil.ReverseProxy{Rewrite: func(req *httputil.ProxyRequest) {
+		// Preserve the incoming path, as the previous Director did, while stripping
+		// untrusted forwarding headers through ReverseProxy's Rewrite lifecycle.
+		req.Out.Host = remote.Host
+		req.Out.URL.Scheme = remote.Scheme
+		req.Out.URL.Host = remote.Host
+	}}
 	proxy.ErrorLog = log.New(logging.L, "", 0)
 
 	router.Use(func(c *gin.Context) {
@@ -371,7 +372,7 @@ func (s *Server) setupServer(server *http.Server) (net.Addr, error) {
 	if server.Addr == "" {
 		server.Addr = "127.0.0.1:"
 	}
-	l, err := net.Listen("tcp", server.Addr)
+	l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", server.Addr)
 	if err != nil {
 		return nil, err
 	}
@@ -516,7 +517,7 @@ func (s *Server) syncIdentityInfoWithRefresh(ctx context.Context, tx *data.Trans
 				logging.Errorf("failed to delete provider user: %s", nestedErr)
 			}
 
-			return fmt.Errorf("%w: %s", ErrSyncFailed, err)
+			return fmt.Errorf("%w: %s", ErrSyncFailed, err.Error())
 		}
 
 		providerUser.LastUpdate = time.Now().UTC()

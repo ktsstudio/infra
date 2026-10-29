@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/infrahq/infra/internal/logging"
 	"io"
 	"os"
 	"strings"
@@ -31,7 +32,9 @@ type RootOptions struct {
 // adds a trailing newline.
 // To write output without a trailing newline use CLI.Stdout directly.
 func (c *CLI) Output(format string, args ...interface{}) {
-	fmt.Fprintf(c.Stdout, format+"\n", args...)
+	if _, err := fmt.Fprintf(c.Stdout, format+"\n", args...); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 }
 
 func (c *CLI) surveyIO(options *survey.AskOptions) error {

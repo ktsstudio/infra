@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -102,7 +103,7 @@ func TestSSHHostsCmd(t *testing.T) {
 		// the mode of the temp dir is not relevant to this test
 		fs.MatchAnyFileMode,
 		// the infra dir is not relevant to this test
-		fs.WithDir(".infra", fs.MatchExtraFiles),
+		fs.WithDir(".infra", fs.WithMode(0o700), fs.MatchExtraFiles),
 		fs.WithDir(".ssh",
 			fs.WithMode(0o700),
 			fs.WithDir("infra",
@@ -141,12 +142,14 @@ Host 127.12.12.1
 	)
 	assert.Assert(t, fs.Equal(home, expected))
 
+	// #nosec G304 -- Test-only file path constructed from a temporary directory or repository fixtures.
 	raw, err := os.ReadFile(filepath.Join(home, ".ssh/infra/keys", pubKeyID))
 	assert.NilError(t, err)
 
 	_, err = ssh.ParseRawPrivateKey(raw)
 	assert.NilError(t, err)
 
+	// #nosec G304 -- Test-only file path constructed from a temporary directory or repository fixtures.
 	raw, err = os.ReadFile(filepath.Join(home, ".ssh/infra/keys", pubKeyID+".pub"))
 	assert.NilError(t, err)
 
@@ -188,9 +191,10 @@ func TestUpdateUserSSHConfig(t *testing.T) {
 			assert.Equal(t, bufs.Stdout.String(), "")
 		}
 
+		// #nosec G304 -- Test-only file path constructed from a temporary directory or repository fixtures.
 		fh, err := os.Open(sshConfigFilename)
 		assert.NilError(t, err)
-		defer fh.Close()
+		defer func() { assert.NilError(t, fh.Close()) }()
 
 		fi, err := fh.Stat()
 		assert.NilError(t, err)
@@ -667,9 +671,10 @@ func TestProvisionSSHKey(t *testing.T) {
 func keyIDsFromKeysConfig(t *testing.T, filename string) []string {
 	t.Helper()
 
+	// #nosec G304 -- Test-only file path constructed from a temporary directory or repository fixtures.
 	fh, err := os.Open(filename)
 	assert.NilError(t, err)
-	defer fh.Close()
+	defer func() { assert.NilError(t, fh.Close()) }()
 
 	keysCfg := &keysConfig{}
 	assert.NilError(t, json.NewDecoder(fh).Decode(keysCfg))
@@ -685,9 +690,14 @@ func TestMkdirAll(t *testing.T) {
 	tmp := t.TempDir()
 
 	filename := filepath.Join(tmp, "isafile")
+	// #nosec G304 -- Test-only file path constructed from a temporary directory or repository fixtures.
 	_, err := os.Create(filename)
 	assert.NilError(t, err)
-	defer os.Remove(filename)
+	defer func() {
+		if err := os.Remove(filename); err != nil && !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("remove temporary file: %v", err)
+		}
+	}()
 
 	type testCase struct {
 		name        string

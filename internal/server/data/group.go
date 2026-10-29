@@ -139,17 +139,7 @@ func ListGroupIDsForUser(tx ReadTxn, userID uid.ID) ([]uid.ID, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	var result []uid.ID
-	for rows.Next() {
-		var id uid.ID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		result = append(result, id)
-	}
-	return result, rows.Err()
+	return scanRows(rows, func(id *uid.ID) []any { return []any{id} })
 }
 
 func DeleteGroup(tx WriteTxn, id uid.ID) error {

@@ -106,7 +106,7 @@ var errAzureReqFailed = fmt.Errorf("request to azure api failed")
 func checkMemberOfGraphGroups(ctx context.Context, accessToken string) ([]string, error) {
 	bearer := "Bearer " + accessToken
 
-	req, err := http.NewRequest(http.MethodGet, graphGroupMemberEndpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, graphGroupMemberEndpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create azure groups request: %w", err)
 	}
@@ -128,7 +128,7 @@ func checkMemberOfGraphGroups(ctx context.Context, accessToken string) ([]string
 		return nil, fmt.Errorf("failed to query azure for groups: %w", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }() // Response body is read below; close is best effort.
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

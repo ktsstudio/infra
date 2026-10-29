@@ -47,7 +47,7 @@ func TestPasswordResetFlow(t *testing.T) {
 	var token string
 	runStep(t, "request password reset", func(t *testing.T) {
 		body := jsonBody(t, &api.PasswordResetRequest{Email: "skeletor@example.com"})
-		r := httptest.NewRequest(http.MethodPost, "/api/password-reset-request", body)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/password-reset-request", body)
 		r.Header.Add("Infra-Version", apiVersionLatest)
 
 		w := httptest.NewRecorder()
@@ -75,7 +75,7 @@ func TestPasswordResetFlow(t *testing.T) {
 
 	runStep(t, "new password empty", func(t *testing.T) {
 		body := jsonBody(t, &api.VerifiedResetPasswordRequest{Token: token})
-		r := httptest.NewRequest(http.MethodPost, "/api/password-reset", body)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/password-reset", body)
 		r.Header.Add("Infra-Version", apiVersionLatest)
 
 		w := httptest.NewRecorder()
@@ -85,7 +85,7 @@ func TestPasswordResetFlow(t *testing.T) {
 
 	runStep(t, "new password does not satisfy password policy", func(t *testing.T) {
 		body := jsonBody(t, &api.VerifiedResetPasswordRequest{Token: token, Password: "secret"})
-		r := httptest.NewRequest(http.MethodPost, "/api/password-reset", body)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/password-reset", body)
 		r.Header.Add("Infra-Version", apiVersionLatest)
 
 		w := httptest.NewRecorder()
@@ -95,7 +95,7 @@ func TestPasswordResetFlow(t *testing.T) {
 
 	runStep(t, "claim password reset token", func(t *testing.T) {
 		body := jsonBody(t, &api.VerifiedResetPasswordRequest{Token: token, Password: "mysecret"})
-		r := httptest.NewRequest(http.MethodPost, "/api/password-reset", body)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/password-reset", body)
 		r.Header.Add("Infra-Version", apiVersionLatest)
 
 		w := httptest.NewRecorder()
@@ -111,7 +111,7 @@ func TestPasswordResetFlow(t *testing.T) {
 
 	runStep(t, "password reset token cannot be claimed more than once", func(t *testing.T) {
 		body := jsonBody(t, &api.VerifiedResetPasswordRequest{Token: token, Password: "mysecret"})
-		r := httptest.NewRequest(http.MethodPost, "/api/password-reset", body)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/password-reset", body)
 		r.Header.Add("Infra-Version", apiVersionLatest)
 
 		w := httptest.NewRecorder()

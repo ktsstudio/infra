@@ -52,7 +52,9 @@ func kubernetesSetContext(cli *CLI, cluster, namespace string) error {
 		return err
 	}
 
-	fmt.Fprintf(cli.Stderr, "Switched to context %q.\n", friendlyName)
+	if _, err := fmt.Fprintf(cli.Stderr, "Switched to context %q.\n", friendlyName); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 	return nil
 }
 
@@ -193,7 +195,7 @@ func writeKubeconfig(user *api.User, destinations []api.Destination, grants []ap
 func safelyWriteConfigToFile(kubeConfig clientcmdapi.Config, fileToWrite string) error {
 	// get the directory of the file we're writing to avoid cross-filesystem moves
 	configDir := filepath.Dir(fileToWrite)
-	if err := os.MkdirAll(configDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
 		return err
 	}
 

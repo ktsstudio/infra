@@ -44,7 +44,7 @@ func TestAPI_GetOrganization(t *testing.T) {
 		assert.NilError(t, err)
 
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/users", &buf)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", &buf)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -74,7 +74,7 @@ func TestAPI_GetOrganization(t *testing.T) {
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		req := httptest.NewRequest(http.MethodGet, tc.urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.urlPath, nil)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
 		if tc.setup != nil {
@@ -202,7 +202,7 @@ func TestAPI_ListOrganizations(t *testing.T) {
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		req := httptest.NewRequest(http.MethodGet, tc.urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.urlPath, nil)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
 		if tc.setup != nil {
@@ -275,7 +275,7 @@ func TestAPI_CreateOrganization(t *testing.T) {
 	run := func(t *testing.T, tc testCase) {
 		body := jsonBody(t, tc.body)
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/organizations", body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/organizations", body)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 		ctx := providers.WithOIDCClient(req.Context(), &fakeOIDCImplementation{})
 		*req = *req.WithContext(ctx)
@@ -353,7 +353,7 @@ func TestAPI_DeleteOrganization(t *testing.T) {
 
 	run := func(t *testing.T, tc testCase) {
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodDelete, tc.urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, tc.urlPath, nil)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
 		if tc.setup != nil {
@@ -412,7 +412,7 @@ func TestAPI_UpdateOrganization(t *testing.T) {
 		assert.NilError(t, err)
 
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/users", &buf)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", &buf)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -487,7 +487,7 @@ func TestAPI_UpdateOrganization(t *testing.T) {
 
 	run := func(t *testing.T, tc testCase) {
 		body := jsonBody(t, tc.body)
-		req := httptest.NewRequest(http.MethodPut, tc.urlPath, body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, tc.urlPath, body)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
 		if tc.setup != nil {

@@ -25,7 +25,9 @@ type LoginError struct {
 
 func (e *LoginError) Error() string {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "Login error: %s.", e.Message)
+	if _, err := fmt.Fprintf(&sb, "Login error: %s.", e.Message); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
 	hostConfig, err := currentHostConfig()
 	if err != nil {
@@ -34,7 +36,9 @@ func (e *LoginError) Error() string {
 	}
 
 	if hostConfig.isLoggedIn() {
-		fmt.Fprintf(&sb, " Your session as %s to %s is still active.", termenv.String(hostConfig.Name).Bold().String(), termenv.String(hostConfig.Host).Bold().String())
+		if _, err := fmt.Fprintf(&sb, " Your session as %s to %s is still active.", termenv.String(hostConfig.Name).Bold().String(), termenv.String(hostConfig.Host).Bold().String()); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 	}
 
 	return sb.String()

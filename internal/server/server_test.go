@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"gotest.tools/v3/assert"
@@ -131,13 +132,13 @@ func TestServer_Run(t *testing.T) {
 
 	t.Run("metrics server started", func(t *testing.T) {
 		// perform one API call to populate metrics
-		req, err := http.NewRequest("GET", "http://"+srv.Addrs.HTTP.String()+"/api/version", nil)
+		req, err := http.NewRequestWithContext(t.Context(), "GET", "http://"+srv.Addrs.HTTP.String()+"/api/version", nil)
 		assert.NilError(t, err)
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
 		resp, err := http.DefaultClient.Do(req)
 		assert.NilError(t, err)
-		defer resp.Body.Close()
+		defer func() { assert.NilError(t, resp.Body.Close()) }()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		// nolint:noctx
@@ -147,7 +148,7 @@ func TestServer_Run(t *testing.T) {
 
 		resp, err = http.DefaultClient.Do(req)
 		assert.NilError(t, err)
-		defer resp.Body.Close()
+		defer func() { assert.NilError(t, resp.Body.Close()) }()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		body, err := io.ReadAll(resp.Body)
@@ -166,7 +167,7 @@ func TestServer_Run(t *testing.T) {
 		// nolint:noctx
 		resp, err := http.Get("http://" + srv.Addrs.HTTP.String() + "/healthz")
 		assert.NilError(t, err)
-		defer resp.Body.Close()
+		defer func() { assert.NilError(t, resp.Body.Close()) }()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
@@ -186,7 +187,7 @@ func TestServer_Run(t *testing.T) {
 
 		resp, err := client.Do(req)
 		assert.NilError(t, err)
-		defer resp.Body.Close()
+		defer func() { assert.NilError(t, resp.Body.Close()) }()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 }
@@ -232,7 +233,7 @@ func TestServer_Run_UIProxy(t *testing.T) {
 		// nolint:noctx
 		resp, err := http.Get("http://" + srv.Addrs.HTTP.String() + "/any-path")
 		assert.NilError(t, err)
-		defer resp.Body.Close()
+		defer func() { assert.NilError(t, resp.Body.Close()) }()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		body, err := io.ReadAll(resp.Body)
@@ -248,7 +249,7 @@ func TestServer_Run_UIProxy(t *testing.T) {
 
 		resp, err := http.DefaultClient.Do(req)
 		assert.NilError(t, err)
-		defer resp.Body.Close()
+		defer func() { assert.NilError(t, resp.Body.Close()) }()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 }
@@ -365,7 +366,7 @@ func TestServer_PersistSignupUser(t *testing.T) {
 	err := json.NewEncoder(&buf).Encode(signupReq)
 	assert.NilError(t, err)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/signup", &buf)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/signup", &buf)
 	req.Header.Set("Infra-Version", apiVersionLatest)
 	resp := httptest.NewRecorder()
 	routes.ServeHTTP(resp, req)
@@ -377,10 +378,10 @@ func TestServer_PersistSignupUser(t *testing.T) {
 
 	// login with "admin@email.com" to get an access key
 	loginReq := api.LoginRequest{PasswordCredentials: &api.LoginRequestPasswordCredentials{Name: email, Password: passwd}}
-	err = json.NewEncoder(&buf).Encode(loginReq)
+	err = json.NewEncoder(&buf).Encode(loginReq) // #nosec G117 -- Login API integration test explicitly sends the generated test credentials.
 	assert.NilError(t, err)
 
-	req = httptest.NewRequest(http.MethodPost, "/api/login", &buf)
+	req = httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/login", &buf)
 	req.Header.Set("Infra-Version", apiVersionLatest)
 	req.Host = signupResp.Organization.Domain
 	resp = httptest.NewRecorder()
@@ -392,7 +393,7 @@ func TestServer_PersistSignupUser(t *testing.T) {
 	assert.NilError(t, err)
 
 	checkAuthenticated := func() {
-		req = httptest.NewRequest(http.MethodGet, "/api/users", nil)
+		req = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/users", nil)
 		req.Header.Set("Authorization", "Bearer "+loginResp.AccessKey)
 		req.Header.Set("Infra-Version", apiVersionLatest)
 		resp = httptest.NewRecorder()
@@ -539,4 +540,30 @@ func TestSyncIdentityInfo(t *testing.T) {
 		_, err = data.GetAccessKeyByKeyID(db, key.KeyID)
 		assert.NilError(t, err)
 	})
+}
+
+func TestUIProxyPreservesPathAndStripsForwardingHeaders(t *testing.T) {
+	seen := make(chan *http.Request, 1)
+	ui := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		seen <- req.Clone(req.Context())
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ui.Close()
+	var opts UIOptions
+	assert.NilError(t, opts.ProxyURL.Set(ui.URL))
+	router := gin.New()
+	registerUIRoutes(router, opts)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/nested/path?view=cluster", nil)
+	for _, header := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Forwarded-Proto"} {
+		req.Header.Set(header, "untrusted-client-value")
+	}
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	assert.Equal(t, resp.Code, http.StatusOK)
+	upstream := <-seen
+	assert.Equal(t, upstream.URL.RequestURI(), "/nested/path?view=cluster")
+	assert.Equal(t, upstream.Host, opts.ProxyURL.Host)
+	for _, header := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Forwarded-Proto"} {
+		assert.Equal(t, upstream.Header.Get(header), "")
+	}
 }

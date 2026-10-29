@@ -82,7 +82,7 @@ func TestDeviceFlow(t *testing.T) {
 		if reqObj != nil {
 			body = jsonBody(t, reqObj)
 		}
-		req := httptest.NewRequest(method, uri, body)
+		req := httptest.NewRequestWithContext(t.Context(), method, uri, body)
 		req.Header.Set("Infra-Version", apiVersionLatest)
 		if len(accessKey) > 0 {
 			req.Header.Set("Authorization", "Bearer "+accessKey)
@@ -169,7 +169,7 @@ func TestAPI_StartDeviceFlow(t *testing.T) {
 		srv := setupServer(t, withAdminUser)
 		routes := srv.GenerateRoutes()
 
-		req := httptest.NewRequest(http.MethodPost, "https://api.example.com:2020/api/device", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "https://api.example.com:2020/api/device", nil)
 		req.Header.Set("Infra-Version", apiVersionLatest)
 		resp := httptest.NewRecorder()
 		routes.ServeHTTP(resp, req)
@@ -203,7 +203,7 @@ func TestAPI_StartDeviceFlow(t *testing.T) {
 		})
 		routes := srv.GenerateRoutes()
 
-		req := httptest.NewRequest(http.MethodPost, "https://nonexistent-org.example.com:2020/api/device", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "https://nonexistent-org.example.com:2020/api/device", nil)
 		req.Header.Set("Infra-Version", apiVersionLatest)
 		resp := httptest.NewRecorder()
 		routes.ServeHTTP(resp, req)
@@ -251,7 +251,7 @@ func TestApproveDeviceFlowRefreshesGroups(t *testing.T) {
 			client := &fakeOIDCImplementation{UserGroups: []string{"cluster-edit"}, UserInfoRevoked: revoked}
 			ctx := providers.WithOIDCClient(context.Background(), client)
 			rCtx := access.RequestContext{
-				Request: httptest.NewRequest(http.MethodPost, "/api/device/approve", nil).WithContext(ctx),
+				Request: httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/device/approve", nil).WithContext(ctx),
 				DBTxn:   tx,
 				Authenticated: access.Authenticated{User: user, AccessKey: &models.AccessKey{
 					ProviderID: provider.ID, Scopes: models.CommaSeparatedStrings{models.ScopeAllowCreateAccessKey},

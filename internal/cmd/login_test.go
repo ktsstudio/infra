@@ -174,7 +174,7 @@ func newConsole(t *testing.T) *expect.Console {
 		// make sure stdout has newlines to prevent test2json parse failures,
 		// and leaking control sequences to stdout.
 		t.Log("\n")
-		console.Close()
+		assert.NilError(t, console.Close())
 	})
 	return console
 }
@@ -269,6 +269,7 @@ func TestLoginCmd_UserPass(t *testing.T) {
 				PasswordUpdateRequired: false,
 				Expires:                api.Time(time.Now().UTC().Add(time.Hour * 24)),
 			}
+			// #nosec G117 -- Synthetic access-key response required by this API test fixture.
 			err = json.NewEncoder(resp).Encode(res)
 			assert.Check(t, err)
 		}
@@ -575,6 +576,7 @@ func TestLoginCmd_Unauthorized(t *testing.T) {
 					Expires:                api.Time(time.Now().UTC().Add(time.Hour * 24)),
 				}
 
+				// #nosec G117 -- Synthetic access-key response required by this API test fixture.
 				err = json.NewEncoder(w).Encode(loginResponse)
 				assert.Check(t, err)
 				return

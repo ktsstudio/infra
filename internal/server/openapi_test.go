@@ -25,7 +25,7 @@ func TestWriteOpenAPIDocToFile(t *testing.T) {
 	err := WriteOpenAPIDocToFile(routes.OpenAPIDocument, filename)
 	assert.NilError(t, err)
 
-	actual, err := os.ReadFile(filename)
+	actual, err := os.ReadFile(filename) // #nosec G304 -- The test reads its own file inside t.TempDir.
 	assert.NilError(t, err)
 	golden.Assert(t, string(actual), "../../../docs/api/openapi3.json")
 }

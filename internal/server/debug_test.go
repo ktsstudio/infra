@@ -28,7 +28,7 @@ func TestAPI_PProfHandler(t *testing.T) {
 
 	run := func(t *testing.T, tc testCase) {
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodGet, "/api/debug/pprof/heap?debug=1", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/debug/pprof/heap?debug=1", nil)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
 		if tc.setupRequest != nil {

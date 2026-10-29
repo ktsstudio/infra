@@ -20,7 +20,7 @@ func CreateRootKey(filename string) error {
 }
 
 func CreateDataKey(rootKeyPath string) (*SymmetricKey, error) {
-	rootKey, err := os.ReadFile(rootKeyPath)
+	rootKey, err := os.ReadFile(rootKeyPath) // #nosec G304 -- Root key paths come from trusted server configuration or encrypted key metadata.
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func CreateDataKey(rootKeyPath string) (*SymmetricKey, error) {
 }
 
 func DecryptDataKey(rootKeyPath string, keyData []byte) (*SymmetricKey, error) {
-	rootKey, err := os.ReadFile(rootKeyPath)
+	rootKey, err := os.ReadFile(rootKeyPath) // #nosec G304 -- Root key paths come from trusted server configuration or encrypted key metadata.
 	if err != nil {
 		return nil, fmt.Errorf("getting root key: %w", err)
 	}

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/infrahq/infra/internal/logging"
 	"os"
 	"path/filepath"
 
@@ -68,7 +69,9 @@ and source this file from your PowerShell profile.
 			case "powershell":
 				cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout) // nolint
 			default:
-				fmt.Fprintf(os.Stdout, "No completions found for specified shell.\n")
+				if _, err := fmt.Fprintf(os.Stdout, "No completions found for specified shell.\n"); err != nil {
+					logging.Debugf("write command output: %s", err)
+				}
 			}
 		},
 	}

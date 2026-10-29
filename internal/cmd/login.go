@@ -121,7 +121,9 @@ func login(cli *CLI, options loginCmdOptions) error {
 	options.Server = strings.TrimPrefix(options.Server, "https://")
 	options.Server = strings.TrimPrefix(options.Server, "http://")
 
-	fmt.Fprintf(cli.Stderr, "  Logging in to %s\n", termenv.String(options.Server).Bold().String())
+	if _, err := fmt.Fprintf(cli.Stderr, "  Logging in to %s\n", termenv.String(options.Server).Bold().String()); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
 	if len(options.TrustedCertificate) == 0 {
 		// Attempt to find a previously trusted certificate
@@ -158,7 +160,9 @@ func login(cli *CLI, options loginCmdOptions) error {
 			return err
 		}
 	case options.User != "":
-		fmt.Fprintf(cli.Stderr, "  Logging in as user %s\n", termenv.String(options.User).Bold().String())
+		if _, err := fmt.Fprintf(cli.Stderr, "  Logging in as user %s\n", termenv.String(options.User).Bold().String()); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 
 		if options.Password == "" {
 			if options.NonInteractive {
@@ -198,7 +202,9 @@ func login(cli *CLI, options loginCmdOptions) error {
 	lc.APIClient.AccessKey = loginRes.AccessKey
 
 	if loginRes.PasswordUpdateRequired {
-		fmt.Fprintf(cli.Stderr, "  Your password has expired. Please update your password.\n")
+		if _, err := fmt.Fprintf(cli.Stderr, "  Your password has expired. Please update your password.\n"); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 
 		for {
 			password, err := promptSetPassword(cli, options.Password)
@@ -218,7 +224,9 @@ func login(cli *CLI, options loginCmdOptions) error {
 				return err
 			}
 
-			fmt.Fprintf(os.Stderr, "  Updated password\n")
+			if _, err := fmt.Fprintf(os.Stderr, "  Updated password\n"); err != nil {
+				logging.Debugf("write command output: %s", err)
+			}
 			break
 		}
 	}
@@ -245,7 +253,9 @@ func login(cli *CLI, options loginCmdOptions) error {
 		}
 	}
 
-	fmt.Fprintf(cli.Stderr, "  Logged in as %s\n", termenv.String(loginRes.Name).Bold().String())
+	if _, err := fmt.Fprintf(cli.Stderr, "  Logged in as %s\n", termenv.String(loginRes.Name).Bold().String()); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
 	if options.InjectUserSSHConfig {
 		return updateUserSSHConfig(cli)
@@ -382,7 +392,7 @@ func fingerprintMatch(cli *CLI, fingerprint string, cert *x509.Certificate) bool
 		return true
 	}
 
-	fmt.Fprintf(cli.Stderr, `
+	if _, err := fmt.Fprintf(cli.Stderr, `
 %v TLS fingerprint from server does not match the trusted fingerprint.
 
 Trusted: %v
@@ -390,7 +400,9 @@ Server:  %v
 `,
 		termenv.String("WARNING").Bold().String(),
 		fingerprint,
-		certs.Fingerprint(cert.Raw))
+		certs.Fingerprint(cert.Raw)); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 	return false
 }
 
@@ -406,7 +418,9 @@ func attemptTLSRequest(options loginCmdOptions) error {
 	httpClient := http.Client{Timeout: 60 * time.Second}
 	res, err := httpClient.Do(req)
 	if err == nil {
-		res.Body.Close()
+		if err := res.Body.Close(); err != nil {
+			logging.Debugf("close TLS probe response: %s", err)
+		}
 		return nil
 	}
 
@@ -433,7 +447,9 @@ func attemptTLSRequest(options loginCmdOptions) error {
 	res, err = httpClient.Do(req)
 
 	if err == nil {
-		res.Body.Close()
+		if err := res.Body.Close(); err != nil {
+			logging.Debugf("close TLS probe response: %s", err)
+		}
 		return nil
 	}
 
@@ -455,8 +471,12 @@ func deviceFlowLogin(ctx context.Context, client *api.Client, cli *CLI) (*api.Lo
 	url := resp.VerificationURI + "?code=" + resp.UserCode
 
 	// display to user
-	fmt.Fprintf(cli.Stderr, "  Navigate to %s and verify your code:\n\n", termenv.String(url).Underline().String())
-	fmt.Fprintf(cli.Stderr, "\t\t%s\n\n", termenv.String(resp.UserCode).Bold().String())
+	if _, err := fmt.Fprintf(cli.Stderr, "  Navigate to %s and verify your code:\n\n", termenv.String(url).Underline().String()); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
+	if _, err := fmt.Fprintf(cli.Stderr, "\t\t%s\n\n", termenv.String(resp.UserCode).Bold().String()); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
 	// we don't care if this fails. some devices won't be able to open the browser
 	_ = browser.OpenURL(url)
@@ -509,7 +529,7 @@ func promptVerifyTLSCert(cli *CLI, cert *x509.Certificate) error {
 
 	// TODO: improve this message
 	// TODO: use color/bold to highlight important parts
-	fmt.Fprintf(cli.Stderr, `
+	if _, err := fmt.Fprintf(cli.Stderr, `
 The certificate presented by the server is not trusted by your operating system.
 
 %[6]v
@@ -534,7 +554,9 @@ manually verify the certificate can be trusted.
 		formatTime(cert.NotAfter),
 		certs.Fingerprint(cert.Raw),
 		title,
-	)
+	); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 	confirmPrompt := &survey.Select{
 		Message: "Options:",
 		Options: []string{

@@ -25,7 +25,7 @@ func TestAPI_CreateToken(t *testing.T) {
 
 	run := func(t *testing.T, tc testCase) {
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/tokens", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/tokens", nil)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
 		if tc.setup != nil {

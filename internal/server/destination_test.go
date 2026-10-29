@@ -30,7 +30,7 @@ func TestAPI_CreateDestination(t *testing.T) {
 	run := func(t *testing.T, tc testCase) {
 		createReq := tc.setup(t)
 		body := jsonBody(t, &createReq)
-		req := httptest.NewRequest(http.MethodPost, "/api/destinations", body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/destinations", body)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -158,7 +158,7 @@ func TestAPI_DeleteDestination(t *testing.T) {
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		req := httptest.NewRequest(http.MethodDelete, "/api/destinations/"+dest.ID.String(), nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/destinations/"+dest.ID.String(), nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -255,7 +255,7 @@ func TestAPI_UpdateDestination(t *testing.T) {
 	run := func(t *testing.T, tc testCase) {
 		createReq := tc.body(t)
 		body := jsonBody(t, &createReq)
-		req := httptest.NewRequest(http.MethodPut, "/api/destinations/"+dest.ID.String(), body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/destinations/"+dest.ID.String(), body)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 

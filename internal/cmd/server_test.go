@@ -220,6 +220,7 @@ api:
 				cmd.SetArgs([]string{"--config-file", dir.Join("cfg.yaml")})
 			},
 			expected: func(t *testing.T) server.Options {
+				// #nosec G101 -- Synthetic credentials used only by this test fixture.
 				return server.Options{
 					Version:                  0.3,
 					TLSCache:                 "/cache/dir",

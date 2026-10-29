@@ -272,7 +272,11 @@ func (k *Kubernetes) ec2ClusterName() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			logging.Debugf("close read-only resource: %s", err)
+		}
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return "", errors.New("received non-OK code from metadata service")
@@ -354,7 +358,11 @@ func (k *Kubernetes) gkeClusterName() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			logging.Debugf("close read-only resource: %s", err)
+		}
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return "", errors.New("received non-OK code from metadata service")
@@ -380,7 +388,11 @@ func (k *Kubernetes) aksClusterName() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			logging.Debugf("close read-only resource: %s", err)
+		}
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return "", errors.New("received non-OK code from metadata service")
@@ -467,7 +479,10 @@ func (k *Kubernetes) Name(chksm string) (string, error) {
 	name := chksm[:12]
 
 	// 169.254.169.254 is an address used by cloud platforms for instance metadata
-	if _, err := net.DialTimeout("tcp", "169.254.169.254:80", 1*time.Second); err == nil {
+	if conn, err := (&net.Dialer{Timeout: time.Second}).DialContext(context.Background(), "tcp", "169.254.169.254:80"); err == nil {
+		if err := conn.Close(); err != nil {
+			logging.Debugf("close instance metadata probe: %s", err)
+		}
 		if name, err := k.ec2ClusterName(); err == nil {
 			return name, nil
 		}

@@ -25,6 +25,7 @@ func (s *StringOrFile) String() string {
 
 func (s *StringOrFile) Set(raw string) error {
 	pathError := &fs.PathError{}
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	fh, err := os.Open(raw)
 	switch {
 	case errors.As(err, &pathError) && errors.Is(pathError.Err, syscall.ENAMETOOLONG):

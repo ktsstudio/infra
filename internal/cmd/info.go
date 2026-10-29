@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/infrahq/infra/internal/logging"
 	"strings"
 	"text/tabwriter"
 
@@ -23,7 +25,7 @@ func newInfoCmd(cli *CLI) *cobra.Command {
 	}
 }
 
-func info(cli *CLI) error {
+func info(cli *CLI) (retErr error) {
 	config, err := currentHostConfig()
 	if err != nil {
 		return err
@@ -45,16 +47,22 @@ func info(cli *CLI) error {
 	}
 
 	w := tabwriter.NewWriter(cli.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight)
-	defer w.Flush()
+	defer func() { retErr = errors.Join(retErr, w.Flush()) }()
 
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Server:\t %s\n", config.Host)
+	if _, err := fmt.Fprintln(w); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
+	if _, err := fmt.Fprintf(w, "Server:\t %s\n", config.Host); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
 	if config.UserID == 0 {
 		return fmt.Errorf("no active user")
 	}
 
-	fmt.Fprintf(w, "User:\t %s (%s)\n", user.Name, user.ID)
+	if _, err := fmt.Fprintf(w, "User:\t %s (%s)\n", user.Name, user.ID); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
 	if config.ProviderID != 0 {
 		provider, err := client.GetProvider(ctx, config.ProviderID)
@@ -62,7 +70,9 @@ func info(cli *CLI) error {
 			return err
 		}
 
-		fmt.Fprintf(w, "Identity Provider:\t %s (%s)\n", provider.Name, provider.URL)
+		if _, err := fmt.Fprintf(w, "Identity Provider:\t %s (%s)\n", provider.Name, provider.URL); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 	}
 
 	userGroups, err := listAll(ctx, client.ListGroups, api.ListGroupsRequest{UserID: config.UserID})
@@ -82,9 +92,13 @@ func info(cli *CLI) error {
 
 	}
 
-	fmt.Fprintf(w, "Groups:\t %s\n", groups)
+	if _, err := fmt.Fprintf(w, "Groups:\t %s\n", groups); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
-	fmt.Fprintln(w)
+	if _, err := fmt.Fprintln(w); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
 	return nil
 }

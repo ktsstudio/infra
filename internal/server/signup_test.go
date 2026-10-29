@@ -37,7 +37,7 @@ func TestAPI_Signup(t *testing.T) {
 		body := tc.setup(t)
 
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/signup", jsonBody(t, body))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/signup", jsonBody(t, body))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
 		resp := httptest.NewRecorder()
@@ -140,7 +140,7 @@ func TestAPI_SignupSocial(t *testing.T) {
 		body := tc.setup(t)
 
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/signup", jsonBody(t, body))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/signup", jsonBody(t, body))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 		ctx := providers.WithOIDCClient(req.Context(), tc.client)
 		*req = *req.WithContext(ctx)
@@ -362,7 +362,7 @@ func TestAPI_SignupUserPass(t *testing.T) {
 		body := tc.setup(t)
 
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/signup", jsonBody(t, body))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/signup", jsonBody(t, body))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
 		resp := httptest.NewRecorder()
@@ -439,7 +439,7 @@ func TestAPI_SignupUserPass(t *testing.T) {
 				badPasswordsFile := path.Join(t.TempDir(), "bad-passwords")
 				t.Setenv("INFRA_SERVER_BAD_PASSWORDS_FILE", badPasswordsFile)
 				t.Cleanup(func() {
-					os.Remove(badPasswordsFile)
+					assert.NilError(t, os.Remove(badPasswordsFile))
 				})
 				badPasswords := "badpassword"
 
@@ -629,7 +629,7 @@ func validateSuccessfulSignup(t *testing.T, db *data.Transaction, testSignup val
 
 	key := cookies[0].Value
 	// nolint:noctx
-	req := httptest.NewRequest(http.MethodGet, "/api/users/self", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/users/self", nil)
 	req.Header.Set("Infra-Version", apiVersionLatest)
 	req.Header.Set("Authorization", "Bearer "+key)
 

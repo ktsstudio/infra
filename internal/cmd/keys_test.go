@@ -52,6 +52,7 @@ func TestKeysAddCmd(t *testing.T) {
 			assert.Check(t, err)
 
 			resp.WriteHeader(http.StatusOK)
+			// #nosec G117 -- Synthetic access-key response required by this API test fixture.
 			err = json.NewEncoder(resp).Encode(&api.CreateAccessKeyResponse{
 				AccessKey: "the-access-key",
 				Name:      "the-key-name",

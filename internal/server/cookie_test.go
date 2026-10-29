@@ -46,7 +46,7 @@ func TestResendAuthCookie(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, matched)
 
-	assert.Equal(t, "signup=; Path=/; Domain=example.com; Max-Age=0; HttpOnly; Secure", cookies[1])
+	assert.Equal(t, "signup=; Path=/; Domain=example.com; Max-Age=0; HttpOnly; Secure; SameSite=Strict", cookies[1])
 }
 
 func TestCookieSecureFlagIsSetForTLS(t *testing.T) {
@@ -69,4 +69,16 @@ func TestCookieSecureFlagIsSetForTLS(t *testing.T) {
 	cookies := resp.Header()["Set-Cookie"]
 
 	assert.Equal(t, "tls-cookie-test=1234; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict", cookies[0])
+}
+
+func TestSessionCookiesSecureBehindTLSProxy(t *testing.T) {
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com/", nil)
+	resp := httptest.NewRecorder()
+	setCookie(req, resp, cookieConfig{Name: cookieAuthorizationName, Value: "secret", Expires: time.Now().Add(time.Minute)})
+	deleteCookie(req, resp, cookieSignupName, "example.com")
+	for _, cookie := range resp.Result().Cookies() {
+		assert.Assert(t, cookie.Secure)
+		assert.Assert(t, cookie.HttpOnly)
+		assert.Equal(t, cookie.SameSite, http.SameSiteStrictMode)
+	}
 }

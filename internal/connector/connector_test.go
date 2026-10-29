@@ -41,7 +41,7 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 	pub, priv := generateJWK(t)
 
 	run := func(t *testing.T, tc testCase) {
-		req := httptest.NewRequest(http.MethodGet, "/apis", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/apis", nil)
 		if tc.setup != nil {
 			tc.setup(t, req)
 		}

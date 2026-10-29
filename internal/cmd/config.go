@@ -65,7 +65,7 @@ func initInfraHomeDir() (string, error) {
 		return "", err
 	}
 
-	if err := os.MkdirAll(infraDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(infraDir, 0o700); err != nil {
 		return "", err
 	}
 
@@ -79,6 +79,7 @@ func readConfig() (*ClientConfig, error) {
 	}
 
 	filename := filepath.Join(infraDir, "config")
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	contents, err := os.ReadFile(filename)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err

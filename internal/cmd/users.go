@@ -114,9 +114,13 @@ func passwordError(cli *CLI, err error) bool {
 		if errors.As(err, &apiError) {
 			for _, fe := range apiError.FieldErrors {
 				if fe.FieldName == "password" {
-					fmt.Fprintln(cli.Stdout, "  New password does not meet the following requirements:")
+					if _, err := fmt.Fprintln(cli.Stdout, "  New password does not meet the following requirements:"); err != nil {
+						logging.Debugf("write command output: %s", err)
+					}
 					for _, pwe := range fe.Errors {
-						fmt.Fprintf(cli.Stdout, "  - %s\n", pwe)
+						if _, err := fmt.Fprintf(cli.Stdout, "  - %s\n", pwe); err != nil {
+							logging.Debugf("write command output: %s", err)
+						}
 					}
 					return true
 				}

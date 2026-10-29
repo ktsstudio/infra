@@ -188,7 +188,11 @@ func listGroupIDsFromNames(tx ReadTxn, names []string) (map[string]uid.ID, error
 
 func CreateIdentity(tx WriteTxn, identity *models.Identity) error {
 	if identity.VerificationToken == "" {
-		identity.VerificationToken = generate.MathRandom(10, generate.CharsetAlphaNumeric)
+		token, err := generate.CryptoRandom(10, generate.CharsetAlphaNumeric)
+		if err != nil {
+			return fmt.Errorf("generate verification token: %w", err)
+		}
+		identity.VerificationToken = token
 	}
 	if err := insert(tx, (*identitiesTable)(identity)); err != nil {
 		return err

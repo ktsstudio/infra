@@ -41,7 +41,7 @@ func TestAPI_Login(t *testing.T) {
 
 	run := func(t *testing.T, tc testCase) {
 		body := jsonBody(t, tc.setup(t))
-		req := httptest.NewRequest(http.MethodPost, "/api/login", body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/login", body)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
 		resp := httptest.NewRecorder()
@@ -101,6 +101,7 @@ func TestAPI_Login(t *testing.T) {
 						Domain:   "example.com",
 						MaxAge:   600,
 						HttpOnly: true,
+						Secure:   true,
 						SameSite: http.SameSiteStrictMode,
 					},
 				}
@@ -163,6 +164,7 @@ func TestAPI_Login(t *testing.T) {
 						Domain:   "example.com",
 						MaxAge:   600,
 						HttpOnly: true,
+						Secure:   true,
 						SameSite: http.SameSiteStrictMode,
 					},
 				}

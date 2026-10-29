@@ -129,7 +129,9 @@ func logoutAll(cli *CLI, clear bool) error {
 		logoutOfServer(&config.Hosts[i])
 	}
 
-	fmt.Fprintf(cli.Stderr, "Logged out of all servers.\n")
+	if _, err := fmt.Fprintf(cli.Stderr, "Logged out of all servers.\n"); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 	if clear {
 		config.Hosts = nil
 		logging.Debugf("cleared all servers from login list\n")
@@ -164,7 +166,9 @@ func logoutOne(cli *CLI, clear bool, server string) error {
 
 	success := logoutOfServer(host)
 	if success {
-		fmt.Fprintf(cli.Stderr, "Logged out of server %s\n", host.Host)
+		if _, err := fmt.Fprintf(cli.Stderr, "Logged out of server %s\n", host.Host); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 	}
 
 	if clear {

@@ -26,7 +26,7 @@ func TestVerifyAndRedirect_Works(t *testing.T) {
 	redirectURL := "https://example.com/hello"
 	url := wrapLinkWithVerification(redirectURL, "example.com", user.VerificationToken)
 
-	req := httptest.NewRequest(http.MethodGet, url, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
 	resp := httptest.NewRecorder()
 	routes.ServeHTTP(resp, req)
 

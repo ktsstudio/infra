@@ -59,7 +59,7 @@ func TestAPI_ListGroups(t *testing.T) {
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		req := httptest.NewRequest(http.MethodGet, tc.urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.urlPath, nil)
 		req.Header.Set("Authorization", "Bearer "+accessKey)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -198,7 +198,7 @@ func TestAPI_CreateGroup(t *testing.T) {
 	run := func(t *testing.T, tc testCase) {
 		body := jsonBody(t, tc.body)
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/groups", body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/groups", body)
 		req.Header.Set("Authorization", "Bearer "+accessKey)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -286,7 +286,7 @@ func TestAPI_DeleteGroup(t *testing.T) {
 
 	run := func(t *testing.T, tc testCase) {
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodDelete, tc.urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, tc.urlPath, nil)
 		req.Header.Set("Authorization", "Bearer "+accessKey)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -362,7 +362,7 @@ func TestAPI_UpdateUsersInGroup(t *testing.T) {
 	run := func(t *testing.T, tc testCase) {
 		body := jsonBody(t, tc.body)
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPatch, tc.urlPath, body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPatch, tc.urlPath, body)
 		req.Header.Set("Authorization", "Bearer "+accessKey)
 		req.Header.Add("Infra-Version", apiVersionLatest)
 

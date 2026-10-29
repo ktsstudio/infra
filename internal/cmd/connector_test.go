@@ -243,6 +243,7 @@ var cmpKubeRequest = cmp.Options{
 
 func readFile(t *testing.T, p string) string {
 	t.Helper()
+	// #nosec G304 -- Test-only file path constructed from a temporary directory or repository fixtures.
 	raw, err := os.ReadFile(p)
 	assert.NilError(t, err)
 	return string(raw)
@@ -261,8 +262,12 @@ func (f *fakeKubeAPI) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case http.MethodPut:
 		f.handlePUT(w, req)
 	default:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "unexpected request to fakeKube: %v %v", req.Method, req.URL)
+		// #nosec G705 -- Test-only fake server explicitly sends Content-Type text/plain before echoing request details.
+		if _, err := fmt.Fprintf(w, "unexpected request to fakeKube: %v %v", req.Method, req.URL); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 	}
 }
 
@@ -324,8 +329,12 @@ func (f *fakeKubeAPI) handleGET(w http.ResponseWriter, req *http.Request) {
 		}
 		assert.Check(f.t, json.NewEncoder(w).Encode(result))
 	default:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "unexpected request to fakeKube: %v %v", req.Method, req.URL)
+		// #nosec G705 -- Test-only fake server explicitly sends Content-Type text/plain before echoing request details.
+		if _, err := fmt.Fprintf(w, "unexpected request to fakeKube: %v %v", req.Method, req.URL); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 	}
 }
 
@@ -366,8 +375,12 @@ func (f *fakeKubeAPI) handlePUT(w http.ResponseWriter, req *http.Request) {
 		assert.Check(f.t, json.NewEncoder(w).Encode(result))
 
 	default:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "unexpected request to fakeKube: %v %v", req.Method, req.URL)
+		// #nosec G705 -- Test-only fake server explicitly sends Content-Type text/plain before echoing request details.
+		if _, err := fmt.Fprintf(w, "unexpected request to fakeKube: %v %v", req.Method, req.URL); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 	}
 }
 

@@ -60,14 +60,14 @@ func TestLoggingMiddleware(t *testing.T) {
 		b := &bytes.Buffer{}
 		router := setup(t, b)
 		resp := httptest.NewRecorder()
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/good/1", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/good/2", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/good/3", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/good/4", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/gooder/", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/good/5", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("POST", "/good/1", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("POST", "/good/2", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/good/1", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/good/2", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/good/3", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/good/4", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/gooder/", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/good/5", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "POST", "/good/1", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "POST", "/good/2", nil))
 
 		actual := decodeLogs(t, b)
 		expected := []logEntry{
@@ -83,12 +83,12 @@ func TestLoggingMiddleware(t *testing.T) {
 		b := &bytes.Buffer{}
 		router := setup(t, b)
 		resp := httptest.NewRecorder()
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/bad/1", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/bad/1", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/bad/2", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/broken", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/broken", nil))
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/broken", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/bad/1", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/bad/1", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/bad/2", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/broken", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/broken", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/broken", nil))
 
 		actual := decodeLogs(t, b)
 		expected := []logEntry{
@@ -107,7 +107,7 @@ func TestLoggingMiddleware(t *testing.T) {
 		router := setup(t, b)
 		resp := httptest.NewRecorder()
 
-		router.ServeHTTP(resp, httptest.NewRequest("GET", "/authned", nil))
+		router.ServeHTTP(resp, httptest.NewRequestWithContext(t.Context(), "GET", "/authned", nil))
 
 		actual := decodeLogs(t, b)
 		expected := []logEntry{

@@ -58,7 +58,9 @@ func newSSHHostsCmd(cli *CLI) *cobra.Command {
 				// after our error message. It can be really easy to miss our error
 				// message because the whole block is clumped together. To make
 				// our error message more visually obvious we add extra newlines.
-				fmt.Fprintf(cli.Stderr, "\ninfra: %v\n\n", err)
+				if _, err := fmt.Fprintf(cli.Stderr, "\ninfra: %v\n\n", err); err != nil {
+					logging.Debugf("write command output: %s", err)
+				}
 				// Suppress printing of error message, because we already printed it
 				return exitError{code: 1}
 			}
@@ -91,17 +93,17 @@ func runSSHHosts(cli *CLI, hostname, port string) error {
 
 	opts, err := defaultClientOpts()
 	if err != nil {
-		return fmt.Errorf("%w: %v", errBeforeDestinationMatch, err)
+		return fmt.Errorf("%w: %w", errBeforeDestinationMatch, err)
 	}
 	client, err := NewAPIClient(opts)
 	if err != nil {
-		return fmt.Errorf("%w: %v", errBeforeDestinationMatch, err)
+		return fmt.Errorf("%w: %w", errBeforeDestinationMatch, err)
 	}
 
 	// TODO: check a local file cache to avoid querying the server in all cases
 	dests, err := client.ListDestinations(ctx, api.ListDestinationsRequest{Kind: "ssh"})
 	if err != nil {
-		return fmt.Errorf("%w: %v", errBeforeDestinationMatch, err)
+		return fmt.Errorf("%w: %w", errBeforeDestinationMatch, err)
 	}
 
 	// Exit if the hostname is not known to infra
@@ -139,6 +141,7 @@ func splitHostPortSSH(hostname string) (host, port string) {
 
 func writeInfraKnownHosts(infraSSHDir string, dest *api.Destination) error {
 	filename := filepath.Join(infraSSHDir, "known_hosts")
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	fh, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
@@ -274,8 +277,10 @@ func provisionSSHKey(ctx context.Context, opts provisionSSHKeyOptions) (string, 
 		}
 
 		// key doesn't exist in the API
-		fmt.Fprintf(opts.cli.Stderr,
-			"Removing %v because it was expired or deleted from Infra\n", filename)
+		if _, err := fmt.Fprintf(opts.cli.Stderr,
+			"Removing %v because it was expired or deleted from Infra\n", filename); err != nil {
+			logging.Debugf("write command output: %s", err)
+		}
 		if err := os.Remove(filename); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return "", fmt.Errorf("removing deleted key %w", err)
 		}
@@ -288,7 +293,9 @@ func provisionSSHKey(ctx context.Context, opts provisionSSHKeyOptions) (string, 
 	if err := mkdirAll(keysDir); err != nil {
 		return "", err
 	}
-	fmt.Fprintf(opts.cli.Stderr, "Creating a new RSA 4096 bit key pair in %v\n", keysDir)
+	if _, err := fmt.Fprintf(opts.cli.Stderr, "Creating a new RSA 4096 bit key pair in %v\n", keysDir); err != nil {
+		logging.Debugf("write command output: %s", err)
+	}
 
 	priv, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
@@ -311,6 +318,7 @@ func provisionSSHKey(ctx context.Context, opts provisionSSHKeyOptions) (string, 
 	}
 
 	keyFilename := filepath.Join(keysDir, resp.ID.String())
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	fh, err := os.OpenFile(keyFilename, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0o600)
 	if err != nil {
 		return "", err
@@ -356,6 +364,7 @@ func updateUserSSHConfig(cli *CLI) error {
 	filename := filepath.Join(userSSHDir, "config")
 
 	var original []byte
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	fh, err := os.Open(filename)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
@@ -364,7 +373,11 @@ func updateUserSSHConfig(cli *CLI) error {
 	case err != nil:
 		return fmt.Errorf("open ssh config: %w", err)
 	default:
-		defer fh.Close() // closing the read only file
+		defer func() {
+			if err := fh.Close(); err != nil {
+				logging.Debugf("close read-only resource: %s", err)
+			}
+		}()
 
 		if hasInfraMatchLine(fh) {
 			return nil
@@ -387,7 +400,11 @@ func updateUserSSHConfig(cli *CLI) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmp.Name())
+	defer func() {
+		if err := os.Remove(tmp.Name()); err != nil && !errors.Is(err, os.ErrNotExist) {
+			logging.Debugf("remove temporary file: %s", err)
+		}
+	}()
 
 	if _, err := tmp.Write(original); err != nil {
 		return err
@@ -482,6 +499,7 @@ func writeDestinationSSHConfig(
 	keyFilename string,
 ) error {
 	filename := filepath.Join(infraSSHDir, "config")
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	fh, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err

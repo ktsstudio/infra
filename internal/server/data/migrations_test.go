@@ -58,7 +58,7 @@ func TestMigrations(t *testing.T) {
 
 		if index == 0 {
 			filename := fmt.Sprintf("testdata/migrations/%v-postgres.sql", tc.label.Name)
-			raw, err := os.ReadFile(filename)
+			raw, err := os.ReadFile(filename) // #nosec G304 -- Migration test reads versioned fixtures selected by its static migration IDs.
 			assert.NilError(t, err)
 
 			_, err = db.Exec(string(raw))
@@ -186,6 +186,7 @@ INSERT INTO providers (id, created_at, updated_at, deleted_at, name, url, client
 			expected: func(t *testing.T, db WriteTxn) {
 				rows, err := db.Query(`SELECT name, auth_url, scopes FROM providers ORDER BY name`)
 				assert.NilError(t, err)
+				defer func() { assert.NilError(t, rows.Close()) }()
 
 				var actual []models.Provider
 				for rows.Next() {
@@ -196,6 +197,7 @@ INSERT INTO providers (id, created_at, updated_at, deleted_at, name, url, client
 					p.AuthURL = authURL.String
 					actual = append(actual, p)
 				}
+				assert.NilError(t, rows.Err())
 
 				expected := []models.Provider{
 					{
@@ -229,7 +231,7 @@ VALUES (12345, '2022-07-05 00:41:49.143574', '2022-07-05 01:41:49.143574Z', 'the
 				stmt := `SELECT id, name, updated_at, last_seen_at from destinations`
 				rows, err := db.Query(stmt)
 				assert.NilError(t, err)
-				defer rows.Close()
+				defer func() { assert.NilError(t, rows.Close()) }()
 
 				var actual []models.Destination
 				for rows.Next() {
@@ -239,6 +241,7 @@ VALUES (12345, '2022-07-05 00:41:49.143574', '2022-07-05 01:41:49.143574Z', 'the
 					actual = append(actual, d)
 				}
 
+				assert.NilError(t, rows.Err())
 				updated := parseTime(t, "2022-07-05T01:41:49.143574Z")
 				expected := []models.Destination{
 					{
@@ -282,7 +285,7 @@ VALUES (12345, '2022-07-05 00:41:49.143574', '2022-07-05 01:41:49.143574Z', 'the
 				stmt := `SELECT id, subject, resource, privilege FROM grants`
 				rows, err := db.Query(stmt)
 				assert.NilError(t, err)
-				defer rows.Close()
+				defer func() { assert.NilError(t, rows.Close()) }()
 
 				var actual []grant
 				for rows.Next() {
@@ -291,6 +294,7 @@ VALUES (12345, '2022-07-05 00:41:49.143574', '2022-07-05 01:41:49.143574Z', 'the
 					assert.NilError(t, err)
 					actual = append(actual, g)
 				}
+				assert.NilError(t, rows.Err())
 
 				expected := []grant{
 					{
@@ -346,12 +350,14 @@ INSERT INTO provider_users (identity_id, provider_id, id, created_at, updated_at
 				var puDetails []providerUserDetails
 				rows, err := db.Query("SELECT email, provider_id FROM provider_users")
 				assert.NilError(t, err)
+				defer func() { assert.NilError(t, rows.Close()) }()
 
 				for rows.Next() {
 					var u providerUserDetails
 					assert.NilError(t, rows.Scan(&u.Email, &u.ProviderID))
 					puDetails = append(puDetails, u)
 				}
+				assert.NilError(t, rows.Err())
 				assert.NilError(t, rows.Close())
 
 				assert.Equal(t, len(puDetails), 1)
@@ -378,7 +384,7 @@ INSERT INTO provider_users (identity_id, provider_id, id, created_at, updated_at
 				var relations []IdentityGroup
 				rows, err := db.Query("SELECT identity_id, group_id FROM identities_groups")
 				assert.NilError(t, err)
-				defer rows.Close()
+				defer func() { assert.NilError(t, rows.Close()) }()
 
 				for rows.Next() {
 					var relation IdentityGroup
@@ -387,6 +393,7 @@ INSERT INTO provider_users (identity_id, provider_id, id, created_at, updated_at
 					relations = append(relations, relation)
 				}
 
+				assert.NilError(t, rows.Err())
 				assert.Equal(t, len(relations), 1)
 				assert.DeepEqual(t, relations[0], IdentityGroup{IdentityID: 101, GroupID: 102})
 			},
@@ -691,6 +698,7 @@ INSERT INTO providers(id, name) VALUES (12345, 'okta');
 				stmt := `SELECT identity_id, group_id FROM identities_groups`
 				rows, err := tx.Query(stmt)
 				assert.NilError(t, err)
+				defer func() { assert.NilError(t, rows.Close()) }()
 				for rows.Next() {
 					var item identityGroup
 					err := rows.Scan(&item.IdentityID, &item.GroupID)
@@ -698,6 +706,7 @@ INSERT INTO providers(id, name) VALUES (12345, 'okta');
 
 					results = append(results, item)
 				}
+				assert.NilError(t, rows.Err())
 				assert.NilError(t, rows.Close())
 
 				for _, item := range results {
@@ -1099,7 +1108,7 @@ INSERT INTO providers(id, name) VALUES (12345, 'okta');
 			expected: func(t *testing.T, tx WriteTxn) {
 				rows, err := tx.Query(`SELECT id, name, domain, private_jwk, public_jwk, install_id FROM organizations WHERE id IN (1001, 2001)`)
 				assert.NilError(t, err)
-				defer rows.Close()
+				defer func() { assert.NilError(t, rows.Close()) }()
 
 				actual, err := scanRows(rows, func(o *models.Organization) []any {
 					return []any{&o.ID, &o.Name, &o.Domain, &o.PrivateJWK, &o.PublicJWK, &o.InstallID}
@@ -1402,7 +1411,7 @@ func dumpSchema(t *testing.T, conn string, args ...string) string {
 	out := new(bytes.Buffer)
 	// https://www.postgresql.org/docs/current/app-pgdump.html
 	args = append(args, "--no-owner", "--no-tablespaces", "--schema=testing")
-	cmd := exec.Command("pg_dump", args...)
+	cmd := exec.CommandContext(t.Context(), "pg_dump", args...) // #nosec G204 -- Test-only pg_dump with fixed flags and the configured isolated test database.
 	cmd.Env = envs
 	cmd.Stdout = out
 	cmd.Stderr = os.Stderr

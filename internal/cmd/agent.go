@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -76,6 +77,9 @@ func configAgentRunning() (bool, error) {
 		return false, err
 	}
 
+	if pid < 0 || pid > math.MaxInt32 {
+		return false, fmt.Errorf("invalid pid: %d", pid)
+	}
 	return processRunning(int32(pid))
 }
 
@@ -102,7 +106,9 @@ func execAgent() error {
 	}
 
 	// use the current infra executable to start the agent
-	cmd := exec.Command(infraExe, "agent")
+	// The agent outlives this CLI invocation, so a background context is intentional.
+	// #nosec G204 -- Executable is resolved from os.Executable, never from request or shell input.
+	cmd := exec.CommandContext(context.Background(), infraExe, "agent")
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -118,11 +124,16 @@ func readStoredAgentProcessID() (int, error) {
 		return 0, err
 	}
 
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	agentConfig, err := os.Open(filepath.Join(infraDir, "agent.pid"))
 	if err != nil {
 		return 0, err
 	}
-	defer agentConfig.Close()
+	defer func() {
+		if err := agentConfig.Close(); err != nil {
+			logging.Debugf("close agent PID file: %s", err)
+		}
+	}()
 
 	var pid int
 
@@ -135,17 +146,18 @@ func readStoredAgentProcessID() (int, error) {
 }
 
 // writeAgentProcessConfig saves details about the agent to config
-func writeAgentConfig(pid int) error {
+func writeAgentConfig(pid int) (retErr error) {
 	infraDir, err := initInfraHomeDir()
 	if err != nil {
 		return err
 	}
 
+	// #nosec G304 -- Local file path explicitly selected by the CLI user or trusted administrator configuration.
 	agentConfig, err := os.Create(filepath.Join(infraDir, "agent.pid"))
 	if err != nil {
 		return err
 	}
-	defer agentConfig.Close()
+	defer func() { retErr = errors.Join(retErr, agentConfig.Close()) }()
 
 	_, err = agentConfig.WriteString(fmt.Sprintf("%d\n", pid))
 	if err != nil {

@@ -164,16 +164,19 @@ func GenerateFromPassword(password string) ([]byte, error) {
 }
 
 // checkBadPasswords checks if the password is a known bad password, i.e. a widely reused password.
-func checkBadPasswords(password string) error {
+func checkBadPasswords(password string) (retErr error) {
 	badPasswordsFile := os.Getenv("INFRA_SERVER_BAD_PASSWORDS_FILE")
 	if badPasswordsFile == "" {
 		return nil
 	}
 
+	// #nosec G304 G703 -- this path comes from operator-controlled server configuration.
 	file, err := os.Open(badPasswordsFile)
 	if err != nil {
 		return err
 	}
+
+	defer func() { retErr = errors.Join(retErr, file.Close()) }()
 
 	scan := bufio.NewScanner(file)
 	scan.Split(bufio.ScanLines)
@@ -183,9 +186,5 @@ func checkBadPasswords(password string) error {
 		}
 	}
 
-	if err := file.Close(); err != nil {
-		return err
-	}
-
-	return nil
+	return scan.Err()
 }

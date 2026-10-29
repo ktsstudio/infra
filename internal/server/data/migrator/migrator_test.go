@@ -140,6 +140,7 @@ func migrationIDs(t *testing.T, db DB) []string {
 	var ids []string
 	rows, err := db.Query(`SELECT id from migrations`)
 	assert.NilError(t, err)
+	defer func() { assert.NilError(t, rows.Close()) }()
 
 	for rows.Next() {
 		var id string
@@ -147,7 +148,7 @@ func migrationIDs(t *testing.T, db DB) []string {
 		ids = append(ids, id)
 	}
 
-	assert.NilError(t, rows.Close())
+	assert.NilError(t, rows.Err())
 	return ids
 }
 
@@ -366,7 +367,7 @@ func runDBTests(t *testing.T, fn func(t *testing.T, db DB)) {
 			assert.NilError(t, err, "Could not connect to database %s, %v", database.dialect, err)
 
 			for _, table := range []string{"migrations", "people", "pets", "books"} {
-				_, err = db.Exec(`DROP TABLE IF EXISTS ` + table)
+				_, err = db.ExecContext(t.Context(), `DROP TABLE IF EXISTS `+table)
 				assert.NilError(t, err)
 			}
 

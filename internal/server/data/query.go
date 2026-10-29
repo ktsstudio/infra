@@ -176,10 +176,13 @@ func columnsForSelect(table Table) string {
 
 // scanRows iterates over rows and builds a slice of T by scanning each row
 // into fields. rows is closed before returning.
-func scanRows[T any](rows *sql.Rows, fields func(*T) []any) ([]T, error) {
-	defer rows.Close()
+func scanRows[T any](rows *sql.Rows, fields func(*T) []any) (result []T, retErr error) {
+	defer func() {
+		if err := rows.Close(); retErr == nil {
+			retErr = err
+		}
+	}()
 
-	var result []T
 	for rows.Next() {
 		var target T
 

@@ -242,12 +242,16 @@ func writeOpenAPIDoc(spec openapi3.Doc, out io.Writer) error {
 	return nil
 }
 
-func WriteOpenAPIDocToFile(openAPIDoc openapi3.Doc, filename string) error {
-	fh, err := os.Create(filename)
+func WriteOpenAPIDocToFile(openAPIDoc openapi3.Doc, filename string) (retErr error) {
+	fh, err := os.Create(filename) // #nosec G304 -- Explicit caller-selected output path for the OpenAPI generation tool.
 	if err != nil {
 		return err
 	}
-	defer fh.Close()
+	defer func() {
+		if err := fh.Close(); retErr == nil {
+			retErr = err
+		}
+	}()
 	return writeOpenAPIDoc(openAPIDoc, fh)
 }
 

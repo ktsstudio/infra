@@ -38,7 +38,7 @@ func TestAPI_GetUser(t *testing.T) {
 		assert.NilError(t, err)
 
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/users", &buf)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", &buf)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -72,7 +72,7 @@ func TestAPI_GetUser(t *testing.T) {
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		req := httptest.NewRequest(http.MethodGet, tc.urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.urlPath, nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -237,7 +237,7 @@ func TestAPI_ListUsers(t *testing.T) {
 		err := json.NewEncoder(&buf).Encode(body)
 		assert.NilError(t, err)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/users", &buf)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", &buf)
 		req.Header.Add("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -265,7 +265,7 @@ func TestAPI_ListUsers(t *testing.T) {
 
 	run := func(t *testing.T, tc testCase) {
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodGet, tc.urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.urlPath, nil)
 		req.Header.Add("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Add("Infra-Version", apiVersionLatest)
 
@@ -516,7 +516,7 @@ func TestAPI_CreateUser(t *testing.T) {
 	run := func(t *testing.T, tc testCase) {
 		body := jsonBody(t, tc.body)
 		// nolint:noctx
-		req := httptest.NewRequest(http.MethodPost, "/api/users", body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", body)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -782,7 +782,7 @@ func TestAPI_CreateUser_EmailInvite(t *testing.T) {
 		patchEmailTestMode(t, "fakekey")
 
 		body := jsonBody(t, &api.CreateUserRequest{Name: "deckard@example.com"})
-		r := httptest.NewRequest(http.MethodPost, "/api/users", body)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", body)
 		r.Header.Add("Infra-Version", apiVersionLatest)
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", adminAccessKey(s)))
 
@@ -816,7 +816,7 @@ func TestAPI_CreateUser_EmailInvite(t *testing.T) {
 	// an invite is claimed by submitting a password reset request with the invite token
 	runStep(t, "claim invite token", func(t *testing.T) {
 		body := jsonBody(t, &api.VerifiedResetPasswordRequest{Token: token, Password: "mysecret"})
-		r := httptest.NewRequest(http.MethodPost, "/api/password-reset", body)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/password-reset", body)
 		r.Header.Add("Infra-Version", apiVersionLatest)
 
 		w := httptest.NewRecorder()
@@ -837,7 +837,7 @@ func TestAPI_CreateUser_EmailInvite(t *testing.T) {
 		patchEmailTestMode(t, "fakekey")
 
 		body := jsonBody(t, &api.CreateUserRequest{Name: "deckard@example.com"})
-		r := httptest.NewRequest(http.MethodPost, "/api/users", body)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/users", body)
 		r.Header.Add("Infra-Version", apiVersionLatest)
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", adminAccessKey(s)))
 
@@ -878,7 +878,7 @@ func TestAPI_DeleteUser(t *testing.T) {
 			name: "can not delete internal users",
 			setup: func(t *testing.T) *http.Request {
 				// nolint:noctx
-				req := httptest.NewRequest(http.MethodDelete, "/api/users/"+connector.ID.String(), nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/users/"+connector.ID.String(), nil)
 				req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 				req.Header.Set("Infra-Version", apiVersionLatest)
 				return req
@@ -891,7 +891,7 @@ func TestAPI_DeleteUser(t *testing.T) {
 			name: "can not delete self",
 			setup: func(t *testing.T) *http.Request {
 				// nolint:noctx
-				req := httptest.NewRequest(http.MethodDelete, "/api/users/"+selfUser.ID.String(), nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/users/"+selfUser.ID.String(), nil)
 				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", selfKey))
 				req.Header.Set("Infra-Version", apiVersionLatest)
 				return req
@@ -904,7 +904,7 @@ func TestAPI_DeleteUser(t *testing.T) {
 			name: "cannot delete users when not authenticated",
 			setup: func(t *testing.T) *http.Request {
 				// nolint:noctx
-				req := httptest.NewRequest(http.MethodDelete, "/api/users/"+testUser.ID.String(), nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/users/"+testUser.ID.String(), nil)
 				req.Header.Set("Infra-Version", apiVersionLatest)
 				return req
 			},
@@ -916,7 +916,7 @@ func TestAPI_DeleteUser(t *testing.T) {
 			name: "cannot delete users when not authorized",
 			setup: func(t *testing.T) *http.Request {
 				// nolint:noctx
-				req := httptest.NewRequest(http.MethodDelete, "/api/users/"+testUser.ID.String(), nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/users/"+testUser.ID.String(), nil)
 				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", selfKey))
 				req.Header.Set("Infra-Version", apiVersionLatest)
 				return req
@@ -941,7 +941,7 @@ func TestAPI_DeleteUser(t *testing.T) {
 				assert.NilError(t, data.CreateGrant(srv.DB(), &models.Grant{Subject: models.NewSubjectForUser(testUser.ID), Privilege: "admin", Resource: "infra"}))
 
 				// nolint:noctx
-				req := httptest.NewRequest(http.MethodDelete, "/api/users/"+testUser.ID.String(), nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/users/"+testUser.ID.String(), nil)
 				req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 				req.Header.Set("Infra-Version", apiVersionLatest)
 				return req
@@ -976,7 +976,7 @@ func TestAPI_UpdateUser(t *testing.T) {
 	run := func(t *testing.T, request *api.UpdateUserRequest, id, accessKey string) *httptest.ResponseRecorder {
 		body := jsonBody(t, request)
 
-		r := httptest.NewRequest(http.MethodPut, "/api/users/"+id, body)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/users/"+id, body)
 		r.Header.Set("Infra-Version", apiVersionLatest)
 
 		if accessKey != "" {
@@ -1173,7 +1173,7 @@ func TestAddUserPublicKey(t *testing.T) {
 	run := func(t *testing.T, tc testCase) {
 		body := tc.body(t)
 
-		req := httptest.NewRequest(http.MethodPut, "/api/users/public-key", jsonBody(t, body))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/users/public-key", jsonBody(t, body))
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 

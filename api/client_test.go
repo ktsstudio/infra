@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"runtime"
+	"strconv"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -16,7 +18,7 @@ import (
 )
 
 func TestErrorStatusCode(t *testing.T) {
-	codes := []int{
+	codes := []int32{
 		http.StatusContinue,
 		http.StatusOK,
 		http.StatusCreated,
@@ -32,14 +34,14 @@ func TestErrorStatusCode(t *testing.T) {
 
 	t.Run("equal to self, not equal to other codes", func(t *testing.T) {
 		for c := 0; c < len(codes); c++ {
-			err := Error{Code: int32(codes[c])}
+			err := Error{Code: codes[c]}
 			for o := 0; o < len(codes); o++ {
 				if o == c {
-					assert.Equal(t, ErrorStatusCode(err), int32(codes[o]))
+					assert.Equal(t, ErrorStatusCode(err), codes[o])
 					continue
 				}
 
-				assert.Assert(t, ErrorStatusCode(err) != int32(codes[o]),
+				assert.Assert(t, ErrorStatusCode(err) != codes[o],
 					"code=%v, other=%v", err.Code, codes[o])
 			}
 		}
@@ -260,4 +262,17 @@ func TestVersionAhead(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Assert(t, !res)
 	})
+}
+
+// Malformed responses from a custom transport must not truncate status values
+// into a different (possibly successful) API error code.
+func TestCheckErrorRejectsOverflowingStatus(t *testing.T) {
+	if strconv.IntSize == 32 {
+		t.Skip("all int status values fit int32 on this platform")
+	}
+	for _, status := range []int{math.MaxInt, math.MinInt} {
+		err := checkError(&http.Response{StatusCode: status}, nil)
+		assert.ErrorContains(t, err, "invalid HTTP status code")
+		assert.Equal(t, ErrorStatusCode(err), int32(0))
+	}
 }

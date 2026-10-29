@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gotest.tools/v3/assert"
-	"k8s.io/utils/strings/slices"
+	"slices"
 
 	"github.com/infrahq/infra/api"
 	"github.com/infrahq/infra/internal/server/data"
@@ -187,7 +187,7 @@ func TestAPI_DeleteProvider(t *testing.T) {
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		req := httptest.NewRequest(http.MethodDelete, tc.urlPath, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, tc.urlPath, nil)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -255,7 +255,7 @@ func TestAPI_CreateProvider(t *testing.T) {
 	run := func(t *testing.T, tc testCase) {
 		body := jsonBody(t, tc.body)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/providers", body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/providers", body)
 		req.Header.Add("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -519,7 +519,7 @@ func TestAPI_UpdateProvider(t *testing.T) {
 		body := jsonBody(t, tc.body)
 
 		id := provider.ID.String()
-		req := httptest.NewRequest(http.MethodPut, "/api/providers/"+id, body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/providers/"+id, body)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -675,7 +675,7 @@ func TestAPI_PatchProvider(t *testing.T) {
 		body := jsonBody(t, tc.body)
 
 		id := provider.ID.String()
-		req := httptest.NewRequest(http.MethodPatch, "/api/providers/"+id, body)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPatch, "/api/providers/"+id, body)
 		req.Header.Set("Authorization", "Bearer "+adminAccessKey(srv))
 		req.Header.Set("Infra-Version", apiVersionLatest)
 
@@ -718,7 +718,7 @@ func TestAPI_PatchProvider(t *testing.T) {
 		},
 		{
 			name: "valid provider (no external checks)",
-			body: api.PatchProviderRequest{
+			body: api.PatchProviderRequest{ // #nosec G101 -- Deliberately fake API credentials for this test.
 				Name:         "new-name-google",
 				ClientSecret: "new-client-secret",
 			},
