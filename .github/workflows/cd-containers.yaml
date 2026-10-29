@@ -17,8 +17,9 @@ jobs:
     uses: ./.github/workflows/ci-core.yaml
   build-scan:
     name: Build and scan ${{ matrix.component }} (${{ matrix.arch }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     strategy:
+      fail-fast: false
       matrix:
         component: [infra, ui]
         arch: [amd64, arm64]
