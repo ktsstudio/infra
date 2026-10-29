@@ -15,6 +15,8 @@ jobs:
     uses: ./.github/workflows/ci-ui.yaml
   core-checks:
     uses: ./.github/workflows/ci-core.yaml
+  connector-checks:
+    uses: ./.github/workflows/acceptance.yaml
   build-scan:
     name: Build and scan ${{ matrix.component }} (${{ matrix.arch }})
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
@@ -93,7 +95,7 @@ jobs:
           compression-level: 0
           retention-days: 1
   publish:
-    needs: [build-scan, core-checks, ui-checks]
+    needs: [build-scan, core-checks, ui-checks, connector-checks]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:

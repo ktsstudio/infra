@@ -27,7 +27,9 @@ is insufficient. The client must also return an email and support refresh tokens
 ## Container publication
 
 The `cd / containers` workflow tests the server and builds the existing core
-Dockerfile for Linux amd64 and arm64. Pushes to `main`, `v*` tags and manual runs
+Dockerfile for Linux amd64 and arm64. Publication also requires the SSH connector
+acceptance suite on Ubuntu, Debian and Red Hat UBI, including grant and revocation
+checks. The UI image is published separately to `ghcr.io/muroed/infra-ui`. Pushes to `main`, `v*` tags and manual runs
 publish to `ghcr.io/muroed/infra` using the built-in `GITHUB_TOKEN`; no Docker Hub
 credentials are required. Pull requests test and build without publishing.
 Tags include `sha-<full commit SHA>`, `latest` on main and the Git tag on releases.
