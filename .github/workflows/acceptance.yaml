@@ -34,6 +34,36 @@ jobs:
           test -x dist/infra_linux_amd64_v1/infra
           test -f dist/infra_0.0.0_amd64.deb
           test -f dist/infra-0.0.0-1.x86_64.rpm
+      - name: Isolate the disposable runner's PAM helper policy
+        run: |
+          set -euo pipefail
+          # Ubuntu's host profile auto-attaches to the UBI unix_chkpwd binary.
+          # It denies UBI's required shadow-file capabilities before PAM can run.
+          # Remove only that host profile for this ephemeral job; keep PAM and
+          # every SSH authentication/authorization test intact.
+          if ! sudo test -r /sys/kernel/security/apparmor/profiles; then
+            echo "AppArmor is not enabled on this runner."
+            exit 0
+          fi
+          sudo cat /sys/kernel/security/apparmor/profiles > "$RUNNER_TEMP/infra-apparmor-before.txt"
+          if ! grep -Eq '^unix-chkpwd \((enforce|complain)\)$' "$RUNNER_TEMP/infra-apparmor-before.txt"; then
+            echo "The host unix-chkpwd profile is not loaded."
+            exit 0
+          fi
+          test -f /etc/apparmor.d/unix-chkpwd
+          # Flatten includes into a private backup; do not edit host policy files.
+          sudo apparmor_parser --preprocess /etc/apparmor.d/unix-chkpwd > "$RUNNER_TEMP/infra-unix-chkpwd.profile"
+          if grep -Fxq 'unix-chkpwd (complain)' "$RUNNER_TEMP/infra-apparmor-before.txt"; then
+            touch "$RUNNER_TEMP/infra-unix-chkpwd.complain"
+          fi
+          # Mark restoration before changing kernel state so failures also restore.
+          touch "$RUNNER_TEMP/infra-unix-chkpwd.restore"
+          sudo apparmor_parser --remove "$RUNNER_TEMP/infra-unix-chkpwd.profile"
+          sudo cat /sys/kernel/security/apparmor/profiles > "$RUNNER_TEMP/infra-apparmor-during.txt"
+          if grep -Eq '^unix-chkpwd ' "$RUNNER_TEMP/infra-apparmor-during.txt"; then
+            echo "unix-chkpwd policy is still loaded" >&2
+            exit 1
+          fi
       - name: Start real server and connector destinations
         run: |
           head -c 32 /dev/urandom > test/root.key
@@ -67,3 +97,14 @@ jobs:
         run: |
           docker compose -f test/docker-compose.yaml down --volumes --remove-orphans
           rm -f test/root.key go.work go.work.sum
+      - name: Restore the host PAM helper policy
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -f "$RUNNER_TEMP/infra-unix-chkpwd.restore" ]; then
+            mode_args=()
+            if [ -f "$RUNNER_TEMP/infra-unix-chkpwd.complain" ]; then mode_args+=(--Complain); fi
+            sudo apparmor_parser --replace "${mode_args[@]}" "$RUNNER_TEMP/infra-unix-chkpwd.profile"
+            sudo cat /sys/kernel/security/apparmor/profiles > "$RUNNER_TEMP/infra-apparmor-after.txt"
+            grep -E '^unix-chkpwd \((enforce|complain)\)$' "$RUNNER_TEMP/infra-apparmor-after.txt"
+          fi
