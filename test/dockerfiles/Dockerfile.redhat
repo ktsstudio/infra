@@ -1,8 +1,10 @@
-ARG image_tag=redhat/ubi9:latest
+ARG image_tag=registry.access.redhat.com/ubi10/ubi:latest@sha256:7495bfa53ae7a81a58aeface0bb4858d12741832c542c29dc690d67b183b73b0
 FROM $image_tag
 
 RUN set -eux \
-   rm -rf /etc/systemd/system/*.wants/* \
+   && dnf update -y \
+   && dnf clean all \
+   && rm -rf /etc/systemd/system/*.wants/* \
       /lib/systemd/system/local-fs.target.wants/* \
       /lib/systemd/system/multi-user.target.wants/* \
       /lib/systemd/system/sockets.target.wants/*initctl* \

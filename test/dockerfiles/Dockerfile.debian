@@ -1,8 +1,8 @@
 
-ARG image_tag=ubuntu:22.10
+ARG image_tag=ubuntu:26.10@sha256:262df65c0ec6bf8d9dcc87454f4330a05fae4b97825f45854af3b136666584c2
 FROM $image_tag
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN set -eux \
     && apt-get update \
@@ -10,6 +10,7 @@ RUN set -eux \
       bash \
       systemd \
       systemd-sysv \
+    && rm -rf /var/lib/apt/lists/* \
     # clean systemd \
     && rm -rf /etc/systemd/system/*.wants/* \
       /lib/systemd/system/local-fs.target.wants/* \
