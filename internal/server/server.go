@@ -463,6 +463,11 @@ var ErrSyncFailed = fmt.Errorf("user sync failed")
 
 // syncIdentityInfo calls the identity provider used to authenticate this user session to update their current information
 func (s *Server) syncIdentityInfo(ctx context.Context, tx *data.Transaction, identity *models.Identity, sessionProviderID uid.ID) error {
+	return s.syncIdentityInfoWithRefresh(ctx, tx, identity, sessionProviderID, false)
+}
+
+// syncIdentityInfoWithRefresh bypasses the periodic sync throttle for explicit logins.
+func (s *Server) syncIdentityInfoWithRefresh(ctx context.Context, tx *data.Transaction, identity *models.Identity, sessionProviderID uid.ID, force bool) error {
 	var provider *models.Provider
 	if s.Google != nil && sessionProviderID == s.Google.ID {
 		provider = s.Google
@@ -488,7 +493,7 @@ func (s *Server) syncIdentityInfo(ctx context.Context, tx *data.Transaction, ide
 	}
 
 	// if provider user was updated recently, skip checking this now to avoid hitting rate limits
-	if time.Since(providerUser.LastUpdate) > providerUserUpdateThreshold {
+	if force || time.Since(providerUser.LastUpdate) > providerUserUpdateThreshold {
 		oidc, err := s.providerClient(ctx, provider, providerUser.RedirectURL)
 		if err != nil {
 			return fmt.Errorf("update provider client: %w", err)

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,8 +16,10 @@ import (
 	"gotest.tools/v3/assert/opt"
 
 	"github.com/infrahq/infra/api"
+	"github.com/infrahq/infra/internal/access"
 	"github.com/infrahq/infra/internal/server/data"
 	"github.com/infrahq/infra/internal/server/models"
+	"github.com/infrahq/infra/internal/server/providers"
 )
 
 func TestDeviceFlow(t *testing.T) {
@@ -225,4 +228,52 @@ func TestAPI_StartDeviceFlow(t *testing.T) {
 		}
 		assert.DeepEqual(t, flowResp, expected, cmpDeviceFlowResponse)
 	})
+}
+
+// CLI login through an existing browser session must not wait for the periodic
+// provider sync throttle, including when access was removed in Keycloak.
+func TestApproveDeviceFlowRefreshesGroups(t *testing.T) {
+	for _, revoked := range []bool{false, true} {
+		t.Run(fmt.Sprintf("revoked=%t", revoked), func(t *testing.T) {
+			srv := setupServer(t)
+			tx := txnForTestCase(t, srv.db, srv.db.DefaultOrg.ID)
+			user := &models.Identity{Name: "cli@example.com"}
+			assert.NilError(t, data.CreateIdentity(tx, user))
+			provider := &models.Provider{Name: "keycloak", Kind: models.ProviderKindOIDC}
+			assert.NilError(t, data.CreateProvider(tx, provider))
+			pu, err := data.CreateProviderUser(tx, provider, user)
+			assert.NilError(t, err)
+			_, err = data.AssignIdentityToGroups(tx, pu, []string{"old-group"})
+			assert.NilError(t, err)
+
+			flow := &models.DeviceFlowAuthRequest{UserCode: "BCDFGHJK", DeviceCode: strings.Repeat("x", 38), ExpiresAt: time.Now().Add(time.Minute)}
+			assert.NilError(t, data.CreateDeviceFlowAuthRequest(tx, flow))
+			client := &fakeOIDCImplementation{UserGroups: []string{"cluster-edit"}, UserInfoRevoked: revoked}
+			ctx := providers.WithOIDCClient(context.Background(), client)
+			rCtx := access.RequestContext{
+				Request: httptest.NewRequest(http.MethodPost, "/api/device/approve", nil).WithContext(ctx),
+				DBTxn:   tx,
+				Authenticated: access.Authenticated{User: user, AccessKey: &models.AccessKey{
+					ProviderID: provider.ID, Scopes: models.CommaSeparatedStrings{models.ScopeAllowCreateAccessKey},
+				}},
+			}
+			// The ordinary periodic check skips this freshly synchronized user.
+			assert.NilError(t, srv.syncIdentityInfo(ctx, tx, user, provider.ID))
+			apiHandler := &API{server: srv}
+			_, err = apiHandler.ApproveDeviceFlow(rCtx, &api.ApproveDeviceFlowRequest{UserCode: flow.UserCode})
+			stored, getErr := data.GetDeviceFlowAuthRequest(tx, data.GetDeviceFlowAuthRequestOptions{ByUserCode: flow.UserCode})
+			assert.NilError(t, getErr)
+			if revoked {
+				assert.ErrorContains(t, err, "user revoked")
+				assert.Assert(t, !stored.Approved())
+				return
+			}
+			assert.NilError(t, err)
+			assert.Assert(t, stored.Approved())
+			identity, err := data.GetIdentity(tx, data.GetIdentityOptions{ByID: user.ID, LoadGroups: true})
+			assert.NilError(t, err)
+			assert.Equal(t, len(identity.Groups), 1)
+			assert.Equal(t, identity.Groups[0].Name, "cluster-edit")
+		})
+	}
 }

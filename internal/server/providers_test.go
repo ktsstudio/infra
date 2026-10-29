@@ -759,6 +759,7 @@ func TestAPI_PatchProvider(t *testing.T) {
 
 // mockOIDC is a fake oidc identity provider
 type fakeOIDCImplementation struct {
+	UserGroups      []string
 	UserInfoRevoked bool   // when true returns an error fromt the user info endpoint
 	FailExchange    bool   // when true auth code exchange fails
 	UserEmail       string // the email returned from the fake identity provider
@@ -793,5 +794,5 @@ func (m *fakeOIDCImplementation) GetUserInfo(_ context.Context, _ *models.Provid
 	if m.UserInfoRevoked {
 		return nil, fmt.Errorf("user revoked")
 	}
-	return &providers.UserInfoClaims{}, nil
+	return &providers.UserInfoClaims{Groups: m.UserGroups}, nil
 }

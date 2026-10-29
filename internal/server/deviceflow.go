@@ -162,5 +162,11 @@ func (a *API) ApproveDeviceFlow(rCtx access.RequestContext, req *api.ApproveDevi
 		return nil, nil
 	}
 
+	// A browser session can outlive changes to the user's Keycloak/OIDC groups.
+	// Refresh before issuing CLI credentials, even when the periodic sync is recent.
+	if err := a.server.syncIdentityInfoWithRefresh(rCtx.Request.Context(), rCtx.DBTxn, rCtx.Authenticated.User, rCtx.Authenticated.AccessKey.ProviderID, true); err != nil {
+		return nil, fmt.Errorf("sync identity before device approval: %w", err)
+	}
+
 	return nil, data.ApproveDeviceFlowAuthRequest(rCtx.DBTxn, dfar.ID, rCtx.Authenticated.User.ID, rCtx.Authenticated.AccessKey.ProviderID)
 }
