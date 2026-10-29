@@ -1,3 +1,23 @@
+# The systemd destinations run only in an isolated acceptance runner.
+# A host cgroup namespace must match the complete cgroup hierarchy mounted below.
+x-systemd: &systemd
+  privileged: true
+  cgroup: host
+  environment:
+    container: docker
+  tmpfs:
+    - /run
+    - /run/lock
+    - /tmp
+  stop_signal: SIGRTMIN+3
+  stop_grace_period: 15s
+  healthcheck:
+    test: ["CMD-SHELL", "state=$$(systemctl is-system-running); [ \"$$state\" = running ] || [ \"$$state\" = degraded ]"]
+    interval: 2s
+    timeout: 5s
+    retries: 60
+    start_period: 10s
+
 services:
   server:
     image: alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
@@ -33,38 +53,38 @@ services:
       retries: 5
 
   destination_ubuntu:
+    <<: *systemd
     build:
       context: .
       dockerfile: dockerfiles/Dockerfile.debian
       args:
         image_tag: ubuntu:26.10@sha256:262df65c0ec6bf8d9dcc87454f4330a05fae4b97825f45854af3b136666584c2
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - ..:/work
-    privileged: true
     depends_on: [server]
     ports: ["127.0.0.1:8220:22"]
 
   destination_debian:
+    <<: *systemd
     build:
       context: .
       dockerfile: dockerfiles/Dockerfile.debian
       args:
         image_tag: debian:13.7-slim@sha256:f6b08b09a05725f9431502d3b5714f5c4576e82c1a84fa1debe0c24a7e0c3ec4
     volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - ..:/work
-    privileged: true
     depends_on: [server]
-    stop_grace_period: 1s
     ports: ["127.0.0.1:8221:22"]
 
   destination_redhat:
+    <<: *systemd
     build:
       context: .
       dockerfile: dockerfiles/Dockerfile.redhat
     volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - ..:/work
-    privileged: true
     depends_on: [server]
-    stop_grace_period: 1s
     ports: ["127.0.0.1:8222:22"]

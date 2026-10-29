@@ -20,4 +20,6 @@ RUN set -eux \
       /lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup* \
       /lib/systemd/system/systemd-update-utmp*
 
-CMD ["/lib/systemd/systemd"]
+ENV container=docker
+STOPSIGNAL SIGRTMIN+3
+CMD ["/lib/systemd/systemd", "--log-target=console"]

@@ -48,9 +48,14 @@ jobs:
       - name: Collect integration logs
         if: always()
         run: |
-          docker compose -f test/docker-compose.yaml logs --no-color > /tmp/infra-acceptance.log 2>&1
+          # Keep diagnostics even if PID 1 exits before journalctl can run.
+          docker info --format 'OS={{.OperatingSystem}} cgroup={{.CgroupVersion}} driver={{.CgroupDriver}}' > /tmp/infra-acceptance.log 2>&1
+          docker compose -f test/docker-compose.yaml ps --all >> /tmp/infra-acceptance.log 2>&1 || true
+          docker compose -f test/docker-compose.yaml logs --no-color >> /tmp/infra-acceptance.log 2>&1 || true
           for container in test-destination_ubuntu-1 test-destination_debian-1 test-destination_redhat-1; do
-            docker exec "$container" journalctl --no-pager -t infra -t sshd -t infra-ssh >> /tmp/infra-acceptance.log 2>&1 || true
+            docker inspect --format '{{.Name}} state={{json .State}} cgroupns={{.HostConfig.CgroupnsMode}}' "$container" >> /tmp/infra-acceptance.log 2>&1 || true
+            docker exec "$container" systemctl --failed --no-pager >> /tmp/infra-acceptance.log 2>&1 || true
+            docker exec "$container" journalctl --no-pager -b >> /tmp/infra-acceptance.log 2>&1 || true
           done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
