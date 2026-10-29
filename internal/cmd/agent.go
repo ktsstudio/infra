@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
-	"github.com/shirou/gopsutil/v3/process"
+	"github.com/cenkalti/backoff/v5"
+	"github.com/shirou/gopsutil/v4/process"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
@@ -41,12 +41,8 @@ func newAgentCmd() *cobra.Command {
 					MaxInterval:         2 * time.Minute,
 					RandomizationFactor: 0.05,
 					Multiplier:          1.5,
-					// MaxElapsedTime is the duration the infra agent should
-					// continue to run without a successful sync. After this time
-					// the agent will exit.
-					MaxElapsedTime: 5 * time.Minute,
 				}
-				waiter := repeat.NewWaiter(backOff)
+				waiter := repeat.NewWaiterWithMaxElapsed(backOff, 5*time.Minute)
 				for {
 					if err := syncKubeConfig(ctx); err != nil {
 						logging.L.Warn().Err(err).Msg("failed to sync kubeconfig")

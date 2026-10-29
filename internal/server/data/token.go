@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"time"
 
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 
 	"github.com/infrahq/infra/internal/claims"
 	"github.com/infrahq/infra/internal/server/models"
 )
 
 var signatureAlgorithmFromKeyAlgorithm = map[string]string{
-	"ED25519": "EdDSA", // elliptic curve 25519
+	"ED25519": "EdDSA", // legacy stored key metadata
+	"EdDSA":   "EdDSA", // RFC 8037 algorithm identifier
 }
 
 func createJWT(db ReadTxn, organization *models.Organization, identity *models.Identity, groups []string, expires time.Time) (string, error) {
@@ -46,7 +47,7 @@ func createJWT(db ReadTxn, organization *models.Organization, identity *models.I
 		Groups: groups,
 	}
 
-	raw, err := jwt.Signed(signer).Claims(claim).Claims(custom).CompactSerialize()
+	raw, err := jwt.Signed(signer).Claims(claim).Claims(custom).Serialize()
 	if err != nil {
 		return "", err
 	}

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mitchellh/mapstructure"
-	"gopkg.in/yaml.v2"
+	"github.com/go-viper/mapstructure/v2"
+	"go.yaml.in/yaml/v2"
 )
 
 type Options struct {

@@ -132,6 +132,16 @@ func login(cli *CLI, options loginCmdOptions) error {
 		}
 	}
 
+	// Validate credentials before contacting the server in non-interactive mode.
+	if options.NonInteractive && options.AccessKey == "" {
+		if options.User == "" {
+			return Error{Message: "Non-interactive login requires setting either the INFRA_ACCESS_KEY or both the INFRA_USER and INFRA_PASSWORD environment variables"}
+		}
+		if options.Password == "" {
+			return Error{Message: "Non-interactive login requires setting the INFRA_PASSWORD environment variable"}
+		}
+	}
+
 	lc, err := newLoginClient(cli, options)
 	if err != nil {
 		return err
@@ -482,7 +492,7 @@ func deviceFlowLogin(ctx context.Context, client *api.Client, cli *CLI) (*api.Lo
 				return pollResp.LoginResponse, nil
 			case api.DeviceFlowStatusPending:
 			default:
-				logging.Warnf("unexpected response status: " + pollResp.Status)
+				logging.Warnf("unexpected response status: %s", pollResp.Status)
 			}
 		}
 	}

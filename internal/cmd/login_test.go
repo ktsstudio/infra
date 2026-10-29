@@ -542,7 +542,7 @@ func TestLoginCmd_TLSVerify(t *testing.T) {
 
 		assert.Assert(t, strings.Contains(bufs.Stderr.String(), "TLS fingerprint from server does not match the trusted fingerprint."))
 		assert.Assert(t, strings.Contains(bufs.Stderr.String(), "Trusted: BA::D0::FF"))
-		assert.Assert(t, strings.Contains(bufs.Stderr.String(), "Server:  C8:73:E3:27:2C:EA:48:00:FA:40:66:1A:3E:97:D8:59:5E:1F:70:8E:83:9F:79:CF:22:04:C8:64:39:40:5B:73"))
+		assert.Assert(t, strings.Contains(bufs.Stderr.String(), "Server:  "+certs.Fingerprint(mustDecodePEMCertificate(t, opts.TLS.Certificate.String()))))
 	})
 }
 
@@ -662,4 +662,11 @@ func TestLoginCmd_Unauthorized(t *testing.T) {
 		}
 		assert.DeepEqual(t, cfg.Hosts, expected, cmpClientHostConfig)
 	})
+}
+
+func mustDecodePEMCertificate(t *testing.T, cert string) []byte {
+	t.Helper()
+	block, _ := pem.Decode([]byte(cert))
+	assert.Assert(t, block != nil, "expected PEM certificate")
+	return block.Bytes
 }

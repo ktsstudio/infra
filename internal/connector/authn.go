@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 
 	"github.com/infrahq/infra/internal/claims"
 )
@@ -51,7 +51,7 @@ func (j *authenticator) Authenticate(req *http.Request) (claims.Custom, error) {
 		return c, fmt.Errorf("no bearer token found")
 	}
 
-	tok, err := jwt.ParseSigned(raw)
+	tok, err := jwt.ParseSigned(raw, []jose.SignatureAlgorithm{jose.EdDSA})
 	if err != nil {
 		return c, fmt.Errorf("invalid JWT signature: %w", err)
 	}

@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog"
 	"gotest.tools/v3/assert"
 	is "gotest.tools/v3/assert/cmp"
@@ -1370,7 +1370,7 @@ func dumpSchema(t *testing.T, conn string, args ...string) string {
 	if _, err := exec.LookPath("pg_dump"); err != nil {
 		msg := "pg_dump is required to run this test. Install pg_dump or set $PATH to include it."
 		if isEnvironmentCI {
-			t.Fatalf(msg)
+			t.Fatal(msg)
 		}
 		t.Skip(msg)
 	}

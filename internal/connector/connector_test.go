@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"gotest.tools/v3/assert"
 	rbacv1 "k8s.io/api/rbac/v1"
 
@@ -80,18 +80,18 @@ func TestAuthenticator_Authenticate(t *testing.T) {
 		{
 			name: "invalid JWK",
 			setup: func(t *testing.T, req *http.Request) {
-				req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJ0ZXN0QHRlc3QuY29tIiwiaWF0IjoxNTE2MjM5MDIyfQ.j7o5o8GBkybaYXdFJIi8O6mPF50E-gJWZ3reLfMQD68")
+				req.Header.Set("Authorization", "Bearer "+generateJWT(t, priv, "test@example.com", time.Now().Add(time.Hour)))
 			},
 			fakeClient:  fakeClient{err: fmt.Errorf("server not available")},
 			expectedErr: "get JWK from server: server not available",
 		},
 		{
-			name: "invalid JWT",
+			name: "reject symmetric JWT algorithm",
 			setup: func(t *testing.T, req *http.Request) {
 				req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJ0ZXN0QHRlc3QuY29tIiwiaWF0IjoxNTE2MjM5MDIyfQ.j7o5o8GBkybaYXdFJIi8O6mPF50E-gJWZ3reLfMQD68")
 			},
 			fakeClient:  fakeClient{key: *pub},
-			expectedErr: "error in cryptographic primitive",
+			expectedErr: "unexpected signature algorithm",
 		},
 		{
 			name: "expired JWT",
@@ -149,13 +149,13 @@ func generateJWK(t *testing.T) (pub *jose.JSONWebKey, priv *jose.JSONWebKey) {
 	pubkey, key, err := ed25519.GenerateKey(rand.Reader)
 	assert.NilError(t, err)
 
-	priv = &jose.JSONWebKey{Key: key, KeyID: "", Algorithm: string(jose.ED25519), Use: "sig"}
+	priv = &jose.JSONWebKey{Key: key, KeyID: "", Algorithm: string(jose.EdDSA), Use: "sig"}
 	thumb, err := priv.Thumbprint(crypto.SHA256)
 	assert.NilError(t, err)
 
 	kid := base64.URLEncoding.EncodeToString(thumb)
 	priv.KeyID = kid
-	pub = &jose.JSONWebKey{Key: pubkey, KeyID: kid, Algorithm: string(jose.ED25519), Use: "sig"}
+	pub = &jose.JSONWebKey{Key: pubkey, KeyID: kid, Algorithm: string(jose.EdDSA), Use: "sig"}
 	return pub, priv
 }
 
@@ -175,7 +175,7 @@ func generateJWT(t *testing.T, priv *jose.JSONWebKey, email string, expiry time.
 		Groups: []string{"developers"},
 	}
 
-	raw, err := jwt.Signed(signer).Claims(cl).Claims(custom).CompactSerialize()
+	raw, err := jwt.Signed(signer).Claims(cl).Claims(custom).Serialize()
 	assert.NilError(t, err)
 	return raw
 }

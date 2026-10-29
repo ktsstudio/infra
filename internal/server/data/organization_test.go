@@ -2,6 +2,7 @@ package data
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -46,6 +47,15 @@ func TestCreateOrganization(t *testing.T) {
 			InstallID:      999,
 		}
 		assert.DeepEqual(t, expected, actual, cmpOrganizationModel)
+		// The previous server only recognizes ED25519 stored key metadata.
+		// Keep new organizations usable when a rolling upgrade is rolled back.
+		var privateKey, publicKey struct {
+			Algorithm string `json:"alg"`
+		}
+		assert.NilError(t, json.Unmarshal([]byte(actual.PrivateJWK), &privateKey))
+		assert.NilError(t, json.Unmarshal(actual.PublicJWK, &publicKey))
+		assert.Equal(t, privateKey.Algorithm, "ED25519")
+		assert.Equal(t, publicKey.Algorithm, "ED25519")
 
 		// infra provider is created
 		orgInfraIDP := InfraProvider(tx)

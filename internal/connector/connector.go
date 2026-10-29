@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	backoff "github.com/cenkalti/backoff/v4"
+	backoff "github.com/cenkalti/backoff/v5"
 	"github.com/goware/urlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"

@@ -3,7 +3,7 @@ package api
 import (
 	_ "embed"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/infrahq/infra/internal/validate"
 )

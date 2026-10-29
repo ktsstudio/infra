@@ -3,7 +3,7 @@ package server
 import (
 	"time"
 
-	"gopkg.in/segmentio/analytics-go.v3"
+	"github.com/segmentio/analytics-go/v3"
 
 	"github.com/infrahq/infra/internal"
 	"github.com/infrahq/infra/internal/access"

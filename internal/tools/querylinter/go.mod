@@ -1,14 +1,14 @@
 module github.com/infrahq/infra/internal/tools/querylinter
 
-go 1.19
+go 1.27.3
 
 require (
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
-	golang.org/x/tools v0.1.12
-	gotest.tools/v3 v3.3.0
+	golang.org/x/mod v0.42.0
+	golang.org/x/tools v0.52.0
+	gotest.tools/v3 v3.5.2
 )
 
 require (
-	github.com/google/go-cmp v0.5.8 // indirect
-	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
 )

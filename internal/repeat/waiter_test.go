@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/cenkalti/backoff/v5"
 	"golang.org/x/net/context"
 	"gotest.tools/v3/assert"
 )
@@ -14,7 +14,6 @@ func TestWaiter_Reset(t *testing.T) {
 		InitialInterval: 1,
 		MaxInterval:     100,
 		Multiplier:      2,
-		Clock:           backoff.SystemClock,
 	}
 	w := NewWaiter(backOff)
 	assert.Equal(t, backOff.NextBackOff(), time.Duration(1))
@@ -40,4 +39,12 @@ func TestWaiter_Wait(t *testing.T) {
 		w := NewWaiter(backoff.NewConstantBackOff(time.Millisecond))
 		assert.NilError(t, w.Wait(context.Background()))
 	})
+}
+
+func TestWaiterMaxElapsed(t *testing.T) {
+	waiter := NewWaiterWithMaxElapsed(backoff.NewConstantBackOff(time.Nanosecond), time.Minute)
+	waiter.started = time.Now().Add(-2 * time.Minute)
+	assert.Error(t, waiter.Wait(context.Background()), "retry limit exceeded")
+	waiter.Reset()
+	assert.NilError(t, waiter.Wait(context.Background()))
 }

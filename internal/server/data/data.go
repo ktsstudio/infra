@@ -11,8 +11,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rs/zerolog"
 
 	"github.com/infrahq/infra/internal"

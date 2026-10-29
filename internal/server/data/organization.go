@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"gopkg.in/square/go-jose.v2"
+	"github.com/go-jose/go-jose/v4"
 
 	"github.com/infrahq/infra/internal/server/data/querybuilder"
 	"github.com/infrahq/infra/internal/server/models"
@@ -46,7 +46,9 @@ func CreateOrganization(tx WriteTxn, org *models.Organization) error {
 			return err
 		}
 
-		sec := jose.JSONWebKey{Key: seckey, KeyID: "", Algorithm: string(jose.ED25519), Use: "sig"}
+		// Preserve stored metadata so older server versions can sign after rollback.
+		// JWT signatures still use the standard EdDSA algorithm.
+		sec := jose.JSONWebKey{Key: seckey, KeyID: "", Algorithm: "ED25519", Use: "sig"}
 
 		thumb, err := sec.Thumbprint(crypto.SHA256)
 		if err != nil {
@@ -55,7 +57,7 @@ func CreateOrganization(tx WriteTxn, org *models.Organization) error {
 
 		sec.KeyID = base64.URLEncoding.EncodeToString(thumb)
 
-		pub := jose.JSONWebKey{Key: pubkey, KeyID: sec.KeyID, Algorithm: string(jose.ED25519), Use: "sig"}
+		pub := jose.JSONWebKey{Key: pubkey, KeyID: sec.KeyID, Algorithm: "ED25519", Use: "sig"}
 
 		secs, err := sec.MarshalJSON()
 		if err != nil {

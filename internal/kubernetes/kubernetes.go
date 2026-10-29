@@ -14,9 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/jessevdk/go-flags"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -292,16 +293,16 @@ func (k *Kubernetes) ec2ClusterName() (string, error) {
 		return "", err
 	}
 
-	awsSess, err := session.NewSession(&aws.Config{Region: aws.String(identity.Region)})
+	awsSess, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(identity.Region))
 	if err != nil {
 		return "", err
 	}
 
-	connection := ec2.New(awsSess)
+	connection := ec2.NewFromConfig(awsSess)
 	name := "instance-id"
 	value := identity.InstanceID
 
-	describeInstancesOutput, err := connection.DescribeInstances(&ec2.DescribeInstancesInput{Filters: []*ec2.Filter{{Name: &name, Values: []*string{&value}}}})
+	describeInstancesOutput, err := connection.DescribeInstances(context.Background(), &ec2.DescribeInstancesInput{Filters: []types.Filter{{Name: &name, Values: []string{value}}}})
 	if err != nil {
 		return "", err
 	}
@@ -320,7 +321,7 @@ func (k *Kubernetes) ec2ClusterName() (string, error) {
 
 	tags := []string{}
 	for _, tag := range instance.Tags {
-		tags = append(tags, fmt.Sprintf("%s:%s", *tag.Key, *tag.Value))
+		tags = append(tags, fmt.Sprintf("%s:%s", aws.ToString(tag.Key), aws.ToString(tag.Value)))
 	}
 
 	var clusterName string

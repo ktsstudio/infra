@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -29,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	k8sapi "k8s.io/client-go/tools/clientcmd/api"
 
@@ -143,7 +145,7 @@ func TestConnector_Run_Kubernetes(t *testing.T) {
 		OrganizationMember: models.OrganizationMember{OrganizationID: srv.DB().OrganizationID()},
 		Name:               "testing",
 		Kind:               "kubernetes",
-		UniqueID:           "4ebfd7dabeec5b37eafd20e3775f70ab86c7422036367d77d9bebfa03864e08b",
+		UniqueID:           "4bf9786af942540c8b9f0b5275dbf658d9950f523b199b77b07aa8921c6cbdbf",
 		ConnectionURL:      "127.0.0.1:55555",
 		ConnectionCA:       opts.CACert.String(),
 		LastSeenAt:         time.Now(),
@@ -336,7 +338,15 @@ func (f *fakeKubeAPI) handlePUT(w http.ResponseWriter, req *http.Request) {
 		Path:   req.URL.Path,
 		Query:  req.URL.Query(),
 	}
-	assert.NilError(f.t, json.NewDecoder(req.Body).Decode(&kubeReq.Body))
+	body, err := io.ReadAll(req.Body)
+	assert.NilError(f.t, err)
+	if req.Header.Get("Content-Type") == "application/vnd.kubernetes.protobuf" {
+		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(body, nil, nil)
+		assert.NilError(f.t, err)
+		body, err = json.Marshal(obj)
+		assert.NilError(f.t, err)
+	}
+	assert.NilError(f.t, json.Unmarshal(body, &kubeReq.Body))
 	f.writes = append(f.writes, kubeReq)
 
 	headers := w.Header()

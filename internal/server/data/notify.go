@@ -8,16 +8,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jackc/pgx/v4"
-	pgxstdlib "github.com/jackc/pgx/v4/stdlib"
+	pgxstdlib "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/infrahq/infra/internal/logging"
 	"github.com/infrahq/infra/uid"
 )
 
 type Listener struct {
-	sqlDB   *sql.DB
-	pgxConn *pgx.Conn
+	sqlConn *sql.Conn
 
 	isMatchingNotify func(payload string) error
 }
@@ -29,7 +27,18 @@ var errNotificationNoMatch = fmt.Errorf("notification did not match")
 // Returns the notification on success, or an error on failure or timeout.
 func (l *Listener) WaitForNotification(ctx context.Context) error {
 	for {
-		notficaition, err := l.pgxConn.WaitForNotification(ctx)
+		var payload string
+		err := l.sqlConn.Raw(func(driverConn any) error {
+			conn, ok := driverConn.(*pgxstdlib.Conn)
+			if !ok {
+				return fmt.Errorf("unexpected database driver %T", driverConn)
+			}
+			notification, err := conn.Conn().WaitForNotification(ctx)
+			if err == nil {
+				payload = notification.Payload
+			}
+			return err
+		})
 		if err != nil {
 			return err
 		}
@@ -38,7 +47,7 @@ func (l *Listener) WaitForNotification(ctx context.Context) error {
 			return nil
 		}
 
-		err = l.isMatchingNotify(notficaition.Payload)
+		err = l.isMatchingNotify(payload)
 		switch {
 		case errors.Is(err, errNotificationNoMatch):
 			continue
@@ -53,10 +62,10 @@ func (l *Listener) WaitForNotification(ctx context.Context) error {
 func (l *Listener) Release(ctx context.Context) error {
 	var errs []error
 	logging.Debugf("unlisten *")
-	if _, err := l.pgxConn.Exec(ctx, `UNLISTEN *`); err != nil {
+	if _, err := l.sqlConn.ExecContext(ctx, `UNLISTEN *`); err != nil {
 		errs = append(errs, err)
 	}
-	if err := pgxstdlib.ReleaseConn(l.sqlDB, l.pgxConn); err != nil {
+	if err := l.sqlConn.Close(); err != nil {
 		errs = append(errs, err)
 	}
 	if len(errs) > 0 {
@@ -85,12 +94,12 @@ func ListenForNotify(ctx context.Context, db *DB, opts ListenForNotifyOptions) (
 	}
 
 	sqlDB := db.SQLdb()
-	pgxConn, err := pgxstdlib.AcquireConn(sqlDB)
+	sqlConn, err := sqlDB.Conn(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	listener := &Listener{sqlDB: sqlDB, pgxConn: pgxConn}
+	listener := &Listener{sqlConn: sqlConn}
 
 	var channel string
 	switch {
@@ -103,9 +112,9 @@ func ListenForNotify(ctx context.Context, db *DB, opts ListenForNotifyOptions) (
 	}
 
 	logging.Debugf("listing for notify on %s", channel)
-	_, err = pgxConn.Exec(ctx, "SELECT listen_on_chan($1)", channel)
+	_, err = sqlConn.ExecContext(ctx, "SELECT listen_on_chan($1)", channel)
 	if err != nil {
-		if err := pgxstdlib.ReleaseConn(sqlDB, pgxConn); err != nil {
+		if err := sqlConn.Close(); err != nil {
 			logging.L.Warn().Err(err).Msgf("release pgx conn")
 		}
 		return nil, err

@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/iancoleman/strcase"
-	"github.com/mitchellh/mapstructure"
 	"github.com/mitchellh/reflectwalk"
 	"github.com/spf13/pflag"
 )
