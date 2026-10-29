@@ -34,7 +34,7 @@ services:
 
   destination_ubuntu:
     build:
-      context: ./test
+      context: .
       dockerfile: dockerfiles/Dockerfile.debian
       args:
         image_tag: ubuntu:26.10@sha256:262df65c0ec6bf8d9dcc87454f4330a05fae4b97825f45854af3b136666584c2
@@ -47,7 +47,7 @@ services:
 
   destination_debian:
     build:
-      context: ./test
+      context: .
       dockerfile: dockerfiles/Dockerfile.debian
       args:
         image_tag: debian:13.7-slim@sha256:f6b08b09a05725f9431502d3b5714f5c4576e82c1a84fa1debe0c24a7e0c3ec4
@@ -60,7 +60,7 @@ services:
 
   destination_redhat:
     build:
-      context: ./test
+      context: .
       dockerfile: dockerfiles/Dockerfile.redhat
     volumes:
       - ..:/work
