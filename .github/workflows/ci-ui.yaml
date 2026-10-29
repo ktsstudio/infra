@@ -27,6 +27,8 @@ jobs:
           node-version: 26.13.0
           cache: npm
           cache-dependency-path: ui/package-lock.json
+      - name: Package manager
+        run: sh scripts/install-npm-toolchain.sh
       - name: Dependencies
         run: npm ci
       - name: Lint
@@ -43,6 +45,8 @@ jobs:
           node-version: 26.13.0
           cache: npm
           cache-dependency-path: ui/package-lock.json
+      - name: Package manager
+        run: sh scripts/install-npm-toolchain.sh
       - name: Dependencies
         run: npm ci
       - name: Test
@@ -57,6 +61,8 @@ jobs:
           node-version: 26.13.0
           cache: npm
           cache-dependency-path: ui/package-lock.json
+      - name: Package manager
+        run: sh scripts/install-npm-toolchain.sh
       - name: Dependencies
         run: npm ci
       - name: Build

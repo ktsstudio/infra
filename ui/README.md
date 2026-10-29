@@ -4,7 +4,7 @@ This directory contains the source code for the Infra Dashboard.
 
 ## Set up
 
-- Install Node.js 26.13.0 or newer and npm 11.20.0 or newer.
+- Install Node.js 26.13.0 or newer and npm 12.2.1 or newer.
 - Run `npm ci` to install the exact, reviewed dependency versions.
 - Install the following extensions if using Visual Studio Code:
   - [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
@@ -74,3 +74,9 @@ wrapper. Confetti uses canvas-confetti and respects reduced-motion preferences.
 The unused react-table v7, react-router-dom and js-yaml dependencies were removed.
 Jest was replaced with Vitest because the latest Jest release still depends on
 a vulnerable deepmerge release without a published patched version.
+
+Builder, development images and CI use `scripts/install-npm-toolchain.sh` to install
+npm 12.2.1. Its bundled ip-address and undici are replaced by compatible patched
+releases (10.7.5 and 6.29.1): the published npm bundle still includes vulnerable
+versions. The undici major remains 6 to preserve npm's internal caller API.
+The production runner contains neither npm nor Yarn.
