@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -1407,7 +1408,16 @@ func dumpSchema(t *testing.T, conn string, args ...string) string {
 	cmd.Stderr = os.Stderr
 
 	assert.NilError(t, cmd.Run())
-	return out.String()
+	// Recent pg_dump versions wrap dumps in psql guards with a random key.
+	// These client commands are not schema and differ on every invocation.
+	var normalized strings.Builder
+	for _, line := range strings.SplitAfter(out.String(), "\n") {
+		if strings.HasPrefix(line, `\restrict `) || strings.HasPrefix(line, `\unrestrict `) {
+			continue
+		}
+		normalized.WriteString(line)
+	}
+	return normalized.String()
 }
 
 func writeSchema(t *testing.T, raw string) {
