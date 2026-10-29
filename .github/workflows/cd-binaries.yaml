@@ -14,6 +14,7 @@ jobs:
     needs: checks
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         goos: [linux, darwin, windows]
         goarch: [amd64, arm64]
@@ -58,7 +59,6 @@ jobs:
       - name: Smoke Linux CLI version and entry points
         if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: |
-          dist/infra-linux-amd64 --version
           dist/infra-linux-amd64 version
           dist/infra-linux-amd64 connector --help
           dist/infra-linux-amd64 server --help

@@ -11,6 +11,17 @@ concurrency:
   group: core-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - run: make lint
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -48,7 +59,6 @@ jobs:
           echo "PG_DUMP_CONTAINER=$POSTGRES_CONTAINER" >> "$GITHUB_ENV"
           echo "$RUNNER_TEMP/pg-bin" >> "$GITHUB_PATH"
       - run: go mod download
-      - run: make lint
       - run: go test -race ./...
         env:
           POSTGRESQL_CONNECTION: host=localhost port=5432 user=postgres dbname=postgres password=test-only-password sslmode=disable

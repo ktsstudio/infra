@@ -69,6 +69,7 @@ jobs:
       - name: Smoke CLI, server and connector commands
         if: matrix.component == 'infra'
         run: |
+          docker run --rm local/infra-infra:scan version
           docker run --rm local/infra-infra:scan --help
           docker run --rm local/infra-infra:scan server --help
           docker run --rm local/infra-infra:scan connector --help
