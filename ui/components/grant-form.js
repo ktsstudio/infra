@@ -80,7 +80,7 @@ export default function GrantForm({
           }}
         >
           <Combobox.Input
-            className={`block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+            className={`block w-full rounded-md border-gray-300 text-xs shadow-xs focus:border-blue-500 focus:ring-blue-500`}
             placeholder='Enter group or user'
             onChange={e => {
               setQuery(e.target.value)
@@ -96,7 +96,7 @@ export default function GrantForm({
             type='search'
           />
           {options?.length > 0 && (
-            <Combobox.Options className='absolute z-10 mt-2 max-h-60 w-56 origin-top-right divide-y divide-gray-100 overflow-auto rounded-md bg-white text-xs shadow-lg shadow-gray-300/20 ring-1 ring-black ring-opacity-5 focus:outline-none'>
+            <Combobox.Options className='absolute z-10 mt-2 max-h-60 w-56 origin-top-right divide-y divide-gray-100 overflow-auto rounded-md bg-white text-xs shadow-lg shadow-gray-300/20 ring-1 ring-black/5 focus:outline-hidden'>
               {options?.map(f => (
                 <Combobox.Option
                   key={f.id}
@@ -146,7 +146,7 @@ export default function GrantForm({
         <button
           disabled={!selected}
           type='submit'
-          className='inline-flex items-center rounded-md border border-transparent bg-black px-4 py-[7px] text-xs font-medium text-white shadow-sm hover:cursor-pointer hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-30'
+          className='inline-flex items-center rounded-md border border-transparent bg-black px-4 py-[7px] text-xs font-medium text-white shadow-xs hover:cursor-pointer hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-30'
         >
           <PlusIcon className='mr-1 h-3 w-3' />
           Add

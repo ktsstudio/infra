@@ -83,7 +83,7 @@ function UsersAddDialog({ setOpen, onAdded = () => {} }) {
                   <div className='group relative my-4 flex'>
                     <span
                       readOnly
-                      className='round-md my-0 w-full rounded-lg bg-gray-50 px-5 py-4 font-mono text-xs text-gray-800 focus:outline-none'
+                      className='round-md my-0 w-full rounded-lg bg-gray-50 px-5 py-4 font-mono text-xs text-gray-800 focus:outline-hidden'
                     >
                       {password}
                     </span>
@@ -112,7 +112,7 @@ function UsersAddDialog({ setOpen, onAdded = () => {} }) {
                   setEmail('')
                   setPassword('')
                 }}
-                className='inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-100'
+                className='inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 shadow-xs hover:bg-gray-100'
               >
                 Add Another
               </button>
@@ -121,7 +121,7 @@ function UsersAddDialog({ setOpen, onAdded = () => {} }) {
                   setOpen(false)
                 }}
                 autoFocus
-                className='inline-flex items-center rounded-md border border-transparent bg-black px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-gray-800'
+                className='inline-flex items-center rounded-md border border-transparent bg-black px-4 py-2 text-xs font-medium text-white shadow-xs hover:bg-gray-800'
               >
                 Done
               </button>
@@ -143,7 +143,7 @@ function UsersAddDialog({ setOpen, onAdded = () => {} }) {
                     setEmail(e.target.value)
                     setError('')
                   }}
-                  className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                  className={`mt-1 block w-full rounded-md shadow-xs focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
                     error ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
@@ -154,13 +154,13 @@ function UsersAddDialog({ setOpen, onAdded = () => {} }) {
               <button
                 type='button'
                 onClick={() => setOpen(false)}
-                className='inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-100'
+                className='inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 shadow-xs hover:bg-gray-100'
               >
                 Cancel
               </button>
               <button
                 type='submit'
-                className='inline-flex items-center rounded-md border border-transparent bg-black px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-gray-800'
+                className='inline-flex items-center rounded-md border border-transparent bg-black px-4 py-2 text-xs font-medium text-white shadow-xs hover:bg-gray-800'
               >
                 Add
               </button>
@@ -216,7 +216,7 @@ export default function Users() {
         <h1 className='py-1 font-display text-xl font-medium'>Users</h1>
         <button
           onClick={() => setOpen(true)}
-          className='inline-flex items-center rounded-md border border-transparent bg-black px-4 py-2 text-xs font-medium text-white shadow-sm hover:cursor-pointer hover:bg-gray-800'
+          className='inline-flex items-center rounded-md border border-transparent bg-black px-4 py-2 text-xs font-medium text-white shadow-xs hover:cursor-pointer hover:bg-gray-800'
         >
           <PlusIcon className='mr-1 h-3 w-3' /> User
         </button>
@@ -233,7 +233,7 @@ export default function Users() {
               leaveFrom='opacity-100'
               leaveTo='opacity-0'
             >
-              <div className='fixed inset-0 bg-white bg-opacity-75 backdrop-blur-xl transition-opacity' />
+              <div className='fixed inset-0 bg-white/75 backdrop-blur-xl transition-opacity' />
             </Transition.Child>
             <div className='fixed inset-0 z-30 overflow-y-auto'>
               <div className='flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0'>

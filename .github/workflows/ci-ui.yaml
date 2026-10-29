@@ -1,14 +1,17 @@
 name: ci / ui
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'ui/**'
+      - '.github/workflows/ci-ui.yaml'
   push:
     branches:
       - main
     paths:
       - 'ui/**'
+      - '.github/workflows/ci-ui.yaml'
 
 defaults:
   run:
@@ -18,19 +21,14 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 18
+          node-version: 26.13.0
           cache: npm
           cache-dependency-path: ui/package-lock.json
-      - uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
-          restore-keys: ${{ runner.os }}-npm-
       - name: Dependencies
-        run: npm install
+        run: npm ci
       - name: Lint
         run: npm run lint
       - name: Format
@@ -39,39 +37,29 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 18
+          node-version: 26.13.0
           cache: npm
           cache-dependency-path: ui/package-lock.json
-      - uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
-          restore-keys: ${{ runner.os }}-npm-
       - name: Dependencies
-        run: npm install
+        run: npm ci
       - name: Test
         run: npm test
 
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 18
+          node-version: 26.13.0
           cache: npm
           cache-dependency-path: ui/package-lock.json
-      - uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
-          restore-keys: ${{ runner.os }}-npm-
       - name: Dependencies
-        run: npm install
+        run: npm ci
       - name: Build
         run: npm run build
-      - name: Export
-        run: npm run export
+      - name: Audit
+        run: npm audit --audit-level=low

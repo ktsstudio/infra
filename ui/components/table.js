@@ -4,8 +4,10 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { TrashIcon } from '@heroicons/react/24/outline'
 import {
   flexRender,
-  getCoreRowModel,
-  useReactTable,
+  rowPaginationFeature,
+  columnSizingFeature,
+  columnVisibilityFeature,
+  useTable,
 } from '@tanstack/react-table'
 
 import Loader from './loader'
@@ -27,10 +29,14 @@ export default function Table({
   onPageChange,
   onDelete,
 }) {
-  const table = useReactTable({
+  const table = useTable({
+    features: {
+      rowPaginationFeature,
+      columnSizingFeature,
+      columnVisibilityFeature,
+    },
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
     pageCount,
     state: {
       pagination: {
@@ -109,8 +115,10 @@ export default function Table({
                   <th scope='col' className='relative w-5 px-6'>
                     <input
                       type='checkbox'
-                      className='left-4 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-30 disabled:focus:ring-0 sm:left-6'
-                      ref={el => (checkbox.current = el)}
+                      className='left-4 h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-30 disabled:focus:ring-0 sm:left-6'
+                      ref={el => {
+                        checkbox.current = el
+                      }}
                       checked={checkedAll}
                       onChange={toggleAll}
                       disabled={
@@ -154,7 +162,7 @@ export default function Table({
                     <th scope='col'>
                       <input
                         type='checkbox'
-                        className='left-4 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-30 disabled:focus:ring-0 sm:left-6'
+                        className='left-4 h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-30 disabled:focus:ring-0 sm:left-6'
                         value={row.id}
                         checked={selectedRowIds.includes(row.original.id)}
                         disabled={row.original.disabledCheckbox}

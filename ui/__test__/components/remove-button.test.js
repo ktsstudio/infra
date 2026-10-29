@@ -3,15 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react'
 
 import RemoveButton from '../../components/remove-button'
 
-jest.mock('@headlessui/react', () => ({
-  ...jest.requireActual('@headlessui/react'),
-}))
-
-global.IntersectionObserver = jest.fn(() => ({
-  observe: () => {},
-  unobserve: () => {},
-  disconnect: () => {},
-}))
+global.IntersectionObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
 
 describe('Remove Button Component', () => {
   it('should render', () => {
