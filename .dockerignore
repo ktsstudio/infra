@@ -1,6 +1,7 @@
 .DS_Store
 .env
 .git
+.github
 .test
 .vscode
 website
@@ -13,5 +14,8 @@ Dockerfile
 build
 dist
 ui/node_modules
+**/node_modules
+ui
+test/root.key
 infra
 helm
