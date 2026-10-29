@@ -1,0 +1,28 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/muroed/infra/blob/main/.security/infra.openvex.json",
+  "author": "https://github.com/muroed/infra",
+  "timestamp": "2026-10-29T13:21:56.281195Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932",
+        "@id": "https://pkg.go.dev/vuln/GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/infrahq/infra",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/crypto@v0.58.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The advisory concerns only golang.org/x/crypto/openpgp and its subpackages. None is in the runtime dependency closure of the Infra server/connector/CLI binary. CI verifies this for all six supported OS/architecture combinations and runs govulncheck -scan=package. x/crypto is retained for maintained cryptography packages. This statement is scoped to x/crypto v0.58.0 and must be reviewed after a version change."
+    }
+  ]
+}

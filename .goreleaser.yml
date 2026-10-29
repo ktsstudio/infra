@@ -1,3 +1,4 @@
+version: 2
 env:
   # Disable CGO for now. This means binaries won't be able to run
   # "infra server" until we enable CGO at a later time.
@@ -72,48 +73,13 @@ nfpms:
           - openssh-server
 archives:
   - id: zip
-    format: zip
-    replacements:
-      amd64: x86_64
+    formats: [zip]
     files:
       - none*
-brews:
-  - tap:
-      owner: infrahq
-      name: homebrew-tap
-    commit_author:
-      name: infra-ci
-      email: contact@infrahq.com
-    homepage: https://infrahq.com
-    description: Infra
-    url_template: "https://github.com/infrahq/infra/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    install: |
-      bin.install "infra"
-      output = Utils.popen_read("#{bin}/infra completion bash")
-      (bash_completion/"infra").write output
-      output = Utils.popen_read("#{bin}/infra completion zsh")
-      (zsh_completion/"_infra").write output
-      output = Utils.popen_read("#{bin}/infra completion fish")
-      (fish_completion/"infra.fish").write output
-scoop:
-  bucket:
-    owner: infrahq
-    name: scoop
-  commit_author:
-    name: infra-ci
-    email: contact@infrahq.com
-  homepage: https://infrahq.com
-  description: Infra
-  url_template: "https://github.com/infrahq/infra/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-publishers:
-  - name: gemfury
-    ids: [packages]
-    dir: "{{ dir .ArtifactPath }}"
-    cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.GEMFURY_TOKEN }}@push.fury.io/infrahq/
 checksum:
   name_template: "{{ .ProjectName }}-checksums.txt"
 snapshot:
-  name_template: "{{ .Env.RELEASE_NAME }}"
+  version_template: "{{ .Env.RELEASE_NAME }}"
 before:
   hooks:
     - sh -c '

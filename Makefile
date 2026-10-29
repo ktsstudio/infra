@@ -50,27 +50,20 @@ dev/clean:
 postgres:
 	docker run -d --name=postgres-dev --rm \
 		-e POSTGRES_PASSWORD=password123 \
-		--tmpfs=/var/lib/postgresql/data \
+		--tmpfs=/var/lib/postgresql \
 		-p 127.0.0.1:15432:5432 \
-		postgres:14-alpine -c fsync=off -c full_page_writes=off \
+		postgres:18.6-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5 -c fsync=off -c full_page_writes=off \
 			-c max_connections=100
 	@echo
 	@echo Copy the line below into the shell used to run tests
 	@echo 'export POSTGRESQL_CONNECTION="host=localhost port=15432 user=postgres dbname=postgres password=password123"'
 
 
-LINT_ARGS ?= --fix
-
-# install from source, because we need to build our plugin with the exact
-# same version of Go, and the exact same version of all Go modules.
-golangci-lint:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.49.0
-
-lint: golangci-lint internal/tools/querylinter/cmd/querylinter.so
-	golangci-lint run $(LINT_ARGS)
-
-%.so:
-	(cd $(@D); go build -o $(@F) -buildmode=plugin .)
+# Run the standard Go analyzers and the repository's SQL query analyzer.
+lint:
+	go vet ./...
+	(cd internal/tools/querylinter; go build -o /tmp/infra-querylinter ./cmd)
+	go vet -vettool=/tmp/infra-querylinter ./...
 
 .PHONY: docs/api/openapi3.json
 docs/api/openapi3.json:

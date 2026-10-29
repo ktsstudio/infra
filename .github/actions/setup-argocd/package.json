@@ -11,16 +11,16 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@actions/core": "^1.9.1",
-    "@actions/exec": "^1.1.1",
-    "@actions/http-client": "^2.0.1",
-    "@actions/io": "^1.1.2",
-    "@actions/tool-cache": "^2.0.1"
+    "@actions/core": "3.0.1",
+    "@actions/exec": "3.0.0",
+    "@actions/http-client": "4.0.1",
+    "@actions/io": "3.0.2",
+    "@actions/tool-cache": "4.0.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.31.1",
-    "eslint": "^8.20.0",
-    "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-plugin-import": "^2.26.0"
-  }
+    "@vercel/ncc": "0.45.0",
+    "eslint": "10.13.0",
+    "@eslint/js": "10.0.1"
+  },
+  "type": "module"
 }

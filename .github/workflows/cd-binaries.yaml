@@ -1,54 +1,69 @@
 name: cd / binaries
-
 on:
   push:
-    tags:
-      - v*
-  workflow_run:
-    workflows:
-      - ci / core
-    types:
-      - completed
-    branches:
-      - main
+    branches: [main]
+    tags: ['v*']
+  pull_request:
   workflow_dispatch:
-
+permissions:
+  contents: read
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
-    outputs:
-      release-name: ${{ steps.release-name.outputs.release-name }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - id: release-name
-        run: |
-          RELEASE_NAME=${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '$(git describe --tags)' }}
-          echo "release-name=$(echo ${RELEASE_NAME#v} | sed 's/-/+/')" >>$GITHUB_OUTPUT
-
+  checks:
+    uses: ./.github/workflows/ci-core.yaml
   build:
+    needs: checks
     runs-on: ubuntu-latest
-    needs: [prepare]
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          go-version: "1.19"
-          cache: true
-      - run: sudo apt-get update && sudo apt-get install -y checkpolicy semodule-utils
-      - uses: goreleaser/goreleaser-action@v4
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          distribution: goreleaser
-          version: latest
-          args: release --rm-dist --snapshot=${{ !startsWith(github.ref, 'refs/tags/') }}
+          go-version-file: go.mod
+      - name: Set and validate semantic version
         env:
-          RELEASE_NAME: ${{ needs.prepare.outputs.release-name }}
-          GITHUB_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
-          GEMFURY_TOKEN: ${{ secrets.GORELEASER_GEMFURY_TOKEN }}
-      - uses: actions/upload-artifact@v3
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version="0.21.0+security.$GITHUB_RUN_NUMBER"
+          if [ "$REF_TYPE" = tag ]; then version="${REF_NAME#v}"; fi
+          cat > "$RUNNER_TEMP/validate-version.go" <<'EOF'
+          package main
+          import (
+            "os"
+            "github.com/Masterminds/semver/v3"
+          )
+          func main() {
+            if _, err := semver.StrictNewVersion(os.Args[1]); err != nil { panic(err) }
+          }
+          EOF
+          go run "$RUNNER_TEMP/validate-version.go" "$version"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - name: Build CLI
+        env:
+          CGO_ENABLED: '0'
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p dist
+          suffix=''
+          if [ "$GOOS" = windows ]; then suffix='.exe'; fi
+          go build -trimpath -ldflags "-s -w -X github.com/infrahq/infra/internal.Version=$VERSION -X github.com/infrahq/infra/internal.Commit=$GITHUB_SHA" -o "dist/infra-$GOOS-$GOARCH$suffix" .
+          cd dist
+          sha256sum * > checksums.txt
+      - name: Smoke Linux CLI version and entry points
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          dist/infra-linux-amd64 --version
+          dist/infra-linux-amd64 version
+          dist/infra-linux-amd64 connector --help
+          dist/infra-linux-amd64 server --help
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: binaries
+          name: infra-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/
+          if-no-files-found: error

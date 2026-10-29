@@ -1,0 +1,64 @@
+name: acceptance / connector
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      COMPOSE_PROJECT_NAME: test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: Install SELinux packaging tools
+        run: sudo apt-get update && sudo apt-get install -y checkpolicy semodule-utils
+      - name: Prepare Linux acceptance packages
+        run: |
+          go run ./test/bin/goreleaser-filter.go > /tmp/infra-goreleaser-linux.yaml
+          # Install scripts intentionally expect the fixture version 0.0.0.
+          echo "RELEASE_NAME=0.0.0" >> "$GITHUB_ENV"
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          version: v2.19.0
+          args: release --clean --snapshot --skip=publish --config /tmp/infra-goreleaser-linux.yaml
+      - name: Verify acceptance artifact paths
+        run: |
+          test -x dist/infra_linux_amd64_v1/infra
+          test -f dist/infra_0.0.0_amd64.deb
+          test -f dist/infra-0.0.0.x86_64.rpm
+      - name: Start real server and connector destinations
+        run: |
+          head -c 32 /dev/urandom > test/root.key
+          docker compose -f test/docker-compose.yaml up --build -d --wait --wait-timeout 180
+      - name: Install connector packages and SSH integration
+        run: ./test/setup.sh
+      - name: Run acceptance tests
+        run: |
+          go work init . ./test
+          cd test
+          go test -v -timeout 15m ./...
+      - name: Collect integration logs
+        if: always()
+        run: |
+          docker compose -f test/docker-compose.yaml logs --no-color > /tmp/infra-acceptance.log 2>&1
+          for container in test-destination_ubuntu-1 test-destination_debian-1 test-destination_redhat-1; do
+            docker exec "$container" journalctl --no-pager -t infra -t sshd -t infra-ssh >> /tmp/infra-acceptance.log 2>&1 || true
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: acceptance-logs
+          path: /tmp/infra-acceptance.log
+      - name: Clean up containers and secrets
+        if: always()
+        run: |
+          docker compose -f test/docker-compose.yaml down --volumes --remove-orphans
+          rm -f test/root.key go.work go.work.sum

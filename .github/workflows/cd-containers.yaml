@@ -1,72 +1,126 @@
 name: cd / containers
-
 on:
   push:
     branches: [main]
     tags: ['v*']
   pull_request:
-    paths:
-      - '**/*.go'
-      - go.mod
-      - go.sum
-      - Dockerfile
-      - '.github/workflows/cd-containers.yaml'
   workflow_dispatch:
-
 permissions:
   contents: read
-
 concurrency:
   group: containers-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
-  test:
-    runs-on: ubuntu-22.04
-    services:
-      postgres:
-        image: postgres:14-alpine
-        env:
-          POSTGRES_PASSWORD: test-only-password
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+  ui-checks:
+    uses: ./.github/workflows/ci-ui.yaml
+  core-checks:
+    uses: ./.github/workflows/ci-core.yaml
+  build-scan:
+    name: Build and scan ${{ matrix.component }} (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [infra, ui]
+        arch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          go-version: '1.19'
-          cache: true
-      - name: Test server, authentication and providers
-        run: go test ./internal/server/...
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build server, connector and CLI image, or UI image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.component == 'ui' && './ui' || '.' }}
+          load: true
+          platforms: linux/${{ matrix.arch }}
+          tags: local/infra-${{ matrix.component }}:scan
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: BUILDVERSION=0.21.0+security.${{ github.run_number }}
+          cache-from: type=gha,scope=${{ matrix.component }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}-${{ matrix.arch }}
+      - name: Record unfiltered vulnerability findings
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: local/infra-${{ matrix.component }}:scan
+          format: json
+          output: /tmp/trivy-raw.json
+          exit-code: '0'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: vulnerabilities-raw-${{ matrix.component }}-${{ matrix.arch }}
+          path: /tmp/trivy-raw.json
+      - name: Scan OS and application vulnerabilities
         env:
-          POSTGRESQL_CONNECTION: 'host=localhost port=5432 user=postgres dbname=postgres password=test-only-password sslmode=disable'
-
-  build:
-    needs: test
-    runs-on: ubuntu-22.04
+          TRIVY_VEX: .security/infra.openvex.json
+          TRIVY_SHOW_SUPPRESSED: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: local/infra-${{ matrix.component }}:scan
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: false
+          format: table
+      - name: Smoke CLI, server and connector commands
+        if: matrix.component == 'infra'
+        run: |
+          docker run --rm local/infra-infra:scan --help
+          docker run --rm local/infra-infra:scan server --help
+          docker run --rm local/infra-infra:scan connector --help
+      - name: Export SBOM for the scanned image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: local/infra-${{ matrix.component }}:scan
+          format: cyclonedx
+          output: /tmp/sbom.cdx.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-${{ matrix.component }}-${{ matrix.arch }}
+          path: /tmp/sbom.cdx.json
+      - name: Export scanned image
+        run: docker save local/infra-${{ matrix.component }}:scan -o /tmp/image.tar
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: scanned-${{ matrix.component }}-${{ matrix.arch }}
+          path: /tmp/image.tar
+          compression-level: 0
+          retention-days: 1
+  publish:
+    needs: [build-scan, core-checks, ui-checks]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        component: [infra, ui]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Image name
         id: image
         env:
           REPOSITORY: ${{ github.repository }}
-        run: echo "name=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        if: github.event_name != 'pull_request'
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          name="ghcr.io/${REPOSITORY,,}"
+          if [ "$COMPONENT" = ui ]; then name="$name-ui"; fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v5
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: metadata
         with:
           images: ${{ steps.image.outputs.name }}
@@ -74,14 +128,31 @@ jobs:
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
-            type=ref,event=pr
-      - uses: docker/build-push-action@v6
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          platforms: linux/amd64,linux/arm64
-          build-args: BUILDVERSION=0.21.0+keycloak.${{ github.run_number }}
-          tags: ${{ steps.metadata.outputs.tags }}
-          labels: ${{ steps.metadata.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          pattern: scanned-${{ matrix.component }}-*
+          path: /tmp/scanned
+      - name: Publish exact scanned image layers and multi-platform tags
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          COMPONENT: ${{ matrix.component }}
+          TAGS: ${{ steps.metadata.outputs.tags }}
+        run: |
+          set -euo pipefail
+          sources=()
+          for arch in amd64 arm64; do
+            docker load -i "/tmp/scanned/scanned-$COMPONENT-$arch/image.tar"
+            tag="$IMAGE:sha-$GITHUB_SHA-$arch"
+            docker tag "local/infra-$COMPONENT:scan" "$tag"
+            docker push "$tag"
+            digest=$(docker buildx imagetools inspect "$tag" --format '{{.Manifest.Digest}}')
+            sources+=("$IMAGE@$digest")
+          done
+          tag_args=()
+          while IFS= read -r tag; do
+            [ -z "$tag" ] || tag_args+=(--tag "$tag")
+          done <<< "$TAGS"
+          docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
+          while IFS= read -r tag; do
+            [ -z "$tag" ] || docker buildx imagetools inspect "$tag"
+          done <<< "$TAGS"

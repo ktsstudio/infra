@@ -24,5 +24,5 @@ outputs:
   infra-version:
     description: The installed version of Infra
 runs:
-  using: node16
+  using: node24
   main: dist/index.js

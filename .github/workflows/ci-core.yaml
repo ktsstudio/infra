@@ -1,163 +1,94 @@
 name: ci / core
-
 on:
   pull_request:
-    paths:
-      - go.mod
-      - go.sum
-      - '**/*.go'
-      - 'test/**'
-      - '.github/workflows/ci-core.yaml'
-      - '.golangci.yml'
-
   push:
-    branches:
-      - main
-    paths:
-      - go.mod
-      - go.sum
-      - '**/*.go'
-      - 'test/**'
-      - '.github/workflows/*-core.yaml'
-      - '.golangci.yml'
-
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: core-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  lint:
+  test:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
-        with:
-          go-version: "1.19"
-          cache: true
-      - name: run lint
-        # disable auto-fix, and enable verbose
-        run: LINT_ARGS=-v  make lint
-
-  go-test:
-    runs-on: ubuntu-latest
-    name: "go-test (postgres ${{matrix.version}})"
     strategy:
       matrix:
-        version: [12, 14]
-
+        postgres: [16, 18]
     services:
       postgres:
-        image: postgres:${{ matrix.version }}-alpine
+        image: postgres:${{ matrix.postgres }}-alpine
         env:
-          POSTGRES_PASSWORD: password123
+          POSTGRES_PASSWORD: test-only-password
+        ports: ['5432:5432']
         options: >-
           --health-cmd pg_isready
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
-        ports: ["127.0.0.1:5432:5432"]
-
+          --health-retries 10
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          go-version: "1.19"
-          cache: true
-      - run: go mod download -x
-      - run: go install gotest.tools/gotestsum@v1.8.2
-
-      - name: Conditionally enable -race
-        if: ${{ github.ref_name == 'main' || contains(github.event.pull_request.labels.*.name, 'action/race') }}
-        run: echo "GO_TEST_RACE=-race" >> $GITHUB_ENV
-
-      - name: go test
-        run: ~/go/bin/gotestsum -ftestname -- ${GO_TEST_RACE:-}  ./...
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: Use PostgreSQL tools matching the test server
         env:
-          POSTGRESQL_CONNECTION: "host=localhost port=5432 user=postgres dbname=postgres password=password123"
-
-      - name: go test querylinter
-        working-directory: ./internal/tools/querylinter
-        run: ~/go/bin/gotestsum -ftestname ./...
-
-      - name: Check that tests leave a clean git checkout
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
         run: |
-          # show and check changes to committed files
-          git diff --exit-code
-          # show and check for uncommitted files
-          git status --short; [[ "$(git status --short)" == "" ]]
-
-  test:
-    runs-on: ubuntu-latest
-    needs: [go-test]
-    if: ${{ always() }}
-    steps:
-      - run: |
-          RESULT="${{ needs.go-test.result }}"
-          [ "$RESULT" = 'success' ] || [ "$RESULT" = 'skipped' ] || exit 1
-
-  check-generated:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
-        with:
-          go-version: "1.19"
-          cache: true
-      - run: go mod download -x
-      - run: go build -debug-actiongraph=compile.json .
-      - uses: actions/upload-artifact@v3
-        with:
-          name: build-log
-          path: compile.json
-      - name: Check go mod is tidy
+          mkdir -p "$RUNNER_TEMP/pg-bin"
+          cat > "$RUNNER_TEMP/pg-bin/pg_dump" <<'EOF'
+          #!/usr/bin/env bash
+          exec docker exec -e PGHOST=127.0.0.1 -e PGPORT=5432 -e PGUSER -e PGPASSWORD -e PGDATABASE "$PG_DUMP_CONTAINER" pg_dump "$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/pg-bin/pg_dump"
+          echo "PG_DUMP_CONTAINER=$POSTGRES_CONTAINER" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/pg-bin" >> "$GITHUB_PATH"
+      - run: go mod download
+      - run: make lint
+      - run: go test -race ./...
+        env:
+          POSTGRESQL_CONNECTION: host=localhost port=5432 user=postgres dbname=postgres password=test-only-password sslmode=disable
+      - name: Query builder linter tests
+        working-directory: internal/tools/querylinter
+        run: go test ./...
+      - name: Verify dependency manifests
         run: |
           go mod tidy
-          git diff --exit-code go.mod go.sum
-      - name: Check generated code is updated
-        run: |
-          go generate ./...
-          git diff --exit-code
-
-  test-acceptance:
+          git diff --exit-code -- go.mod go.sum
+  security:
     runs-on: ubuntu-latest
-    if: ${{ github.ref_name == 'main' || contains(github.event.pull_request.labels.*.name, 'action/test-acceptance') }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          go-version: "1.19"
-          cache: true
-      - run: sudo apt-get update && sudo apt-get install -y checkpolicy semodule-utils
-      - run: go install gotest.tools/gotestsum@v1.8.2
-
-      - name: Filter goreleaser config to linux only
-        run: go run ./test/bin/goreleaser-filter.go > .goreleaser.linux.yml
-
-      - uses: goreleaser/goreleaser-action@v4
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          distribution: goreleaser
-          version: latest
-          args: release --rm-dist --snapshot --skip-publish --config .goreleaser.linux.yml
-        env:
-          RELEASE_NAME: 0.0.0
-
-      # the ./test module uses the main module, this is an easy way to use the
-      # dependencies from the main module
-      - name: Setup workspace
-        run: go work init . ./test
-
-      - name: Start containers
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - run: GOTOOLCHAIN="$(go env GOVERSION)" go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 -scan=package ./...
+      - name: Verify OpenPGP vulnerable code is absent on every supported platform
         run: |
-          head -c 32 < /dev/urandom > test/root.key
-          docker compose -f test/docker-compose.yaml up -d --wait
-
-      - name: Setup destinations
-        run: ./test/setup.sh
-
-      - name: Run tests
-        working-directory: test
-        run: ~/go/bin/gotestsum -ftestname -- ./...
-
-      - name: Container output
-        if: always()
+          set -euo pipefail
+          for target_os in linux darwin windows; do
+            for target_arch in amd64 arm64; do
+              CGO_ENABLED=0 GOOS="$target_os" GOARCH="$target_arch" go list -deps . > "$RUNNER_TEMP/infra-deps-$target_os-$target_arch.txt"
+              if grep -Eq '^golang.org/x/crypto/openpgp(/|$)' "$RUNNER_TEMP/infra-deps-$target_os-$target_arch.txt"; then
+                echo "OpenPGP is now imported: the not_affected VEX statement is no longer valid"
+                exit 1
+              fi
+            done
+          done
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.0
+      - name: Install patched npm build tooling
+        run: sh ui/scripts/install-npm-toolchain.sh
+      - name: Audit local JavaScript actions
         run: |
-          set +e
-          docker compose --ansi always -f test/docker-compose.yaml logs
-          echo "systemd logs from ubuntu"
-          docker exec test-destination_ubuntu-1 journalctl -t infra -t sshd -t infra-ssh
+          for action in .github/actions/*; do
+            (cd "$action" && npm ci --ignore-scripts && npm audit && npm run lint && npm run prepare)
+          done

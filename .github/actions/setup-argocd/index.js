@@ -1,9 +1,9 @@
-const path = require('path');
+import * as path from 'path';
 
-const core = require('@actions/core');
-const exec = require('@actions/exec');
-const http = require('@actions/http-client');
-const cache = require('@actions/tool-cache');
+import * as core from '@actions/core';
+import * as exec from '@actions/exec';
+import * as http from '@actions/http-client';
+import * as cache from '@actions/tool-cache';
 
 const base = new URL('https://github.com/');
 

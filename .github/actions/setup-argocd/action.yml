@@ -15,5 +15,5 @@ outputs:
   argocd-tools:
     description: The installed ArgoCD tools
 runs:
-  using: node16
+  using: node24
   main: dist/index.js

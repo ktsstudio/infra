@@ -6,6 +6,9 @@ on:
   schedule:
     - cron: "14 3 * * *"
 
+permissions:
+  contents: read
+
 jobs:
   fuzz-matrix:
     if: ${{ github.event_name == 'schedule' || github.event.label.name == 'action/fuzz' }}
@@ -13,10 +16,10 @@ jobs:
     outputs:
       fuzz-names: ${{ steps.list-fuzz.outputs.list }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.19'
+          go-version-file: go.mod
           cache: true
       - run: go mod download -x
       - id: list-fuzz
@@ -34,7 +37,7 @@ jobs:
         name: ${{ fromJson(needs.fuzz-matrix.outputs.fuzz-names) }}
     services:
       postgres:
-        image: postgres:14-alpine
+        image: postgres:18.6-alpine
         env:
           POSTGRES_PASSWORD: password123
         options: >-
@@ -45,13 +48,13 @@ jobs:
         ports: ["127.0.0.1:5432:5432"]
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.19'
+          go-version-file: go.mod
           cache: true
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: go-fuzz-corpus-${{ matrix.name }}-${{ github.run_number }}
           restore-keys: go-fuzz-corpus-${{ matrix.name }}-
