@@ -80,7 +80,7 @@ jobs:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           platforms: linux/amd64,linux/arm64
-          build-args: BUILDVERSION=0.0.0-keycloak.${{ github.run_number }}
+          build-args: BUILDVERSION=0.21.0+keycloak.${{ github.run_number }}
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           cache-from: type=gha
