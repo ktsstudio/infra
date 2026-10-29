@@ -4,7 +4,7 @@ set -eu -o pipefail
 
 echo "Running Infra connector install on $DESTINATION_NAME"
 
-PACKAGE_PATH=/work/dist/infra-0.0.0.x86_64.rpm
+PACKAGE_PATH=/work/dist/infra-0.0.0-1.x86_64.rpm
 INFRA_SERVER_URL=test-server-1
 
 

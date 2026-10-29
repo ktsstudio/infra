@@ -33,7 +33,7 @@ jobs:
         run: |
           test -x dist/infra_linux_amd64_v1/infra
           test -f dist/infra_0.0.0_amd64.deb
-          test -f dist/infra-0.0.0.x86_64.rpm
+          test -f dist/infra-0.0.0-1.x86_64.rpm
       - name: Start real server and connector destinations
         run: |
           head -c 32 /dev/urandom > test/root.key
