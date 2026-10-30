@@ -1,0 +1,74 @@
+name: publish / Homebrew tap
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published stable release tag (for example v0.22.0)
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    secrets:
+      HOMEBREW_TAP_DEPLOY_KEY:
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: homebrew-tap
+  cancel-in-progress: false
+jobs:
+  update:
+    if: github.event_name != 'release' || (!github.event.release.prerelease && !github.event.release.draft)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ktsstudio/homebrew-tap
+          path: tap
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+      - name: Download and verify the latest release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          latest=$(gh release view --json tagName --jq .tagName)
+          if [ "$latest" != "$RELEASE_TAG" ]; then
+            echo "Skipping $RELEASE_TAG: latest release is $latest"
+            echo 'update=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p /tmp/homebrew-assets
+          gh release download "$RELEASE_TAG" --dir /tmp/homebrew-assets \
+            --pattern checksums.txt --pattern 'infra-darwin-*' --pattern 'infra-linux-*'
+          scripts/homebrew/generate-formula.sh "${RELEASE_TAG#v}" /tmp/homebrew-assets tap/Formula/infra.rb
+          ruby -c tap/Formula/infra.rb
+          echo 'update=true' >> "$GITHUB_OUTPUT"
+      - name: Update tap
+        if: steps.release.outputs.update == 'true'
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          cd tap
+          if git diff --quiet -- Formula/infra.rb; then
+            echo 'Formula is already current'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Formula/infra.rb
+          git commit -m "Update Infra CLI to $RELEASE_TAG"
+          git push origin HEAD:main
