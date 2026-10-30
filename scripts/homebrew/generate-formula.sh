@@ -17,7 +17,6 @@ cat > "$output" <<FORMULA
 class Infra < Formula
   desc "Secure infrastructure access CLI"
   homepage "https://github.com/ktsstudio/infra"
-  version "$version"
   license "Elastic-2.0"
 
   on_macos do
