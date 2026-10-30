@@ -22,7 +22,34 @@ concurrency:
   group: homebrew-tap
   cancel-in-progress: false
 jobs:
+  verify:
+    if: github.event_name != 'release' || (!github.event.release.prerelease && !github.event.release.draft)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Verify release and install formula
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          mkdir -p /tmp/homebrew-assets
+          gh release download "$RELEASE_TAG" --dir /tmp/homebrew-assets \
+            --pattern checksums.txt --pattern 'infra-darwin-*' --pattern 'infra-linux-*'
+          brew tap ktsstudio/tap
+          tap_path=$(brew --repository ktsstudio/tap)
+          scripts/homebrew/generate-formula.sh "${RELEASE_TAG#v}" /tmp/homebrew-assets "$tap_path/Formula/infra.rb"
+          brew install --formula ktsstudio/tap/infra
+          brew test ktsstudio/tap/infra
   update:
+    needs: verify
     if: github.event_name != 'release' || (!github.event.release.prerelease && !github.event.release.draft)
     runs-on: ubuntu-latest
     steps:
